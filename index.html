@@ -674,8 +674,11 @@ function isSetupComplete() {
   if (!cfg.rawScript || !cfg.rawScript.trim()) return false;
   if (!hasSlot('reach') || !hasSlot('intro') || !hasSlot('commit') || !hasSlot('wrap')) return false;
   const t = cfg.campaignType;
-  if (t === 'fundraising') {
-    if (!cfg.donationUrl) return false;
+  if (t === 'ballot') {
+    // Ballot campaigns need the measure name and position; the Commit
+    // screen reads wrong without them. Donation URL is intentionally
+    // NOT required for fundraising -- some orgs collect offline only.
+    if (!cfg.measureName || !cfg.measurePosition) return false;
   }
   return true;
 }
@@ -1261,7 +1264,7 @@ const SCREENS = {
       </div>
       <div class="field">
         <label for="cs-script">Paste your script</label>
-        <textarea id="cs-script" rows="14" placeholder="## REACH&#10;Your opening line when someone answers.&#10;&#10;## INTRO&#10;Who you are and why you're reaching out.&#10;&#10;## LISTEN&#10;What you ask to hear their concerns. (optional)&#10;&#10;## CASE&#10;The case you make for your candidate or cause. (optional)&#10;&#10;## SUPPORT&#10;How you ask where they stand. (optional)&#10;&#10;## COMMIT&#10;The specific ask you make.&#10;&#10;## WRAP&#10;How you close the conversation.&#10;&#10;## OBJECTIONS&#10;Q: A common objection you hear.&#10;A: How you respond to it.">${escHtml(cfg.rawScript)}</textarea>
+        <textarea id="cs-script" rows="14" placeholder="##REACH&#10;Your opening line when someone answers.&#10;&#10;##INTRO&#10;Who you are and why you're reaching out.&#10;&#10;##LISTEN&#10;What you ask to hear their concerns. (optional)&#10;&#10;##CASE&#10;The case you make for your candidate or cause. (optional)&#10;&#10;##SUPPORT&#10;How you ask where they stand. (optional)&#10;&#10;##COMMIT&#10;The specific ask you make.&#10;&#10;##WRAP&#10;How you close the conversation.&#10;&#10;##OBJECTIONS&#10;Q: A common objection you hear.&#10;A: How you respond to it.">${escHtml(cfg.rawScript)}</textarea>
       </div>
       <div class="warning-box" id="scriptValidationMsg" hidden></div>
       <details class="cfg" open>
@@ -1452,11 +1455,33 @@ const SCREENS = {
     node.querySelector('#saveCampaignBtn').onclick = async () => {
       const scriptValue = node.querySelector('#cs-script').value;
       const parsedCheck = parseOrganizerScript(scriptValue);
-      const missing = REQUIRED_SLOTS.filter(slot => !parsedCheck.slots[slot] || !parsedCheck.slots[slot].trim());
       const msgEl = node.querySelector('#scriptValidationMsg');
+
+      // Collect every problem at once so the organizer fixes the form in
+      // one pass instead of playing whack-a-mole with the Save button.
+      const orgValue  = node.querySelector('#cs-org').value.trim();
+      const typeValue = node.querySelector('#cs-type').value;
+      const problems  = [];
+
+      if (!typeValue) problems.push('pick a <b>Campaign type</b>');
+      if (!orgValue)  problems.push('enter your <b>Organization / campaign name</b>');
+      // "Custom title…" selected but left blank saves an empty key-date
+      // label. Preset options can't be blank, so this only fires on custom.
+      if (!getDateLabel()) problems.push('give the <b>Key date</b> a title (pick a preset or type a custom title)');
+
+      if (typeValue === 'ballot') {
+        if (!node.querySelector('#cs-mname')?.value.trim()) problems.push('enter the <b>Measure name / number</b>');
+        if (!node.querySelector('#cs-mpos')?.value)          problems.push('select <b>Our position</b> (Yes or No)');
+      }
+
+      const missing = REQUIRED_SLOTS.filter(slot => !parsedCheck.slots[slot] || !parsedCheck.slots[slot].trim());
       if (missing.length) {
+        problems.push(`add the required script section${missing.length === 1 ? '' : 's'}: <b>${missing.map(s => REQUIRED_SLOT_LABELS[s]).join(', ')}</b>`);
+      }
+
+      if (problems.length) {
         msgEl.hidden = false;
-        msgEl.innerHTML = `<b>Missing required script sections.</b> Reach, Intro, Commit, and Wrap must all have content before you can save. Missing: ${missing.map(s => REQUIRED_SLOT_LABELS[s]).join(', ')}.`;
+        msgEl.innerHTML = `<b>Before you can save:</b><br>${problems.map(p => '• ' + p).join('<br>')}`;
         msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
       }
@@ -1646,6 +1671,7 @@ const SCREENS = {
         <label for="vs-name">Contact name (from your list)</label>
         <input id="vs-name" placeholder="e.g. Maria Alvarez" value="${escHtml(C.name)}" autocomplete="off">
       </div>
+      <div class="warning-box" id="startValidationMsg" hidden></div>
       <div class="choices" style="margin-top:18px">
         <button class="choice go" id="startBtn"><span class="ic">▶</span><span>Start conversation</span></button>
       </div>
@@ -1668,9 +1694,35 @@ const SCREENS = {
 
     node.querySelector('#startBtn').onclick = async () => {
       const canv = node.querySelector('#vs-canv').value.trim();
+      const id   = node.querySelector('#vs-id').value.trim();
+      const name = node.querySelector('#vs-name').value.trim();
+      const msgEl = node.querySelector('#startValidationMsg');
+
+      // Canvasser name is required: blank rows lump under "Unknown" in the
+      // admin campaign report. Contact needs at least an ID or a name so
+      // the logged row can be matched back to the voter file -- either one
+      // is enough (some lists have IDs with messy names, or vice versa).
+      const problems = [];
+      if (!canv)         problems.push('<b>your name</b> (canvasser)');
+      if (!id && !name)  problems.push('a <b>Contact ID or contact name</b> — at least one');
+      if (problems.length) {
+        msgEl.hidden = false;
+        msgEl.innerHTML = `<b>Missing info.</b> Please add ${problems.join(' and ')} before starting.`;
+        msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      msgEl.hidden = true;
+
+      // Early duplicate warning: catch a repeat before the volunteer
+      // dials or knocks, not after the whole conversation. Non-blocking
+      // because re-contacts (callbacks etc.) are sometimes intentional.
+      if (id && log.some(r => r.contactId && r.contactId === id)) {
+        if (!confirm(`Contact ID ${id} has already been contacted this session. Start this conversation anyway?`)) return;
+      }
+
       if (canv !== cfg.canvasser) { cfg.canvasser = canv; await saveCfg(); }
-      C.contactId = node.querySelector('#vs-id').value.trim();
-      C.name      = node.querySelector('#vs-name').value.trim();
+      C.contactId = id;
+      C.name      = name;
       go('identity');
     };
     const goSetupBtn = node.querySelector('#goSetupBtn');
