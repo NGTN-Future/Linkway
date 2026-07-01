@@ -1302,14 +1302,7 @@ const SCREENS = {
         <div class="section-head">Share with volunteers</div>
         <div class="section-sub">Send this link to every volunteer. When they open it, the campaign script and settings load automatically — no tech setup on their end.</div>
       </div>
-      <div class="field">
-        <label for="cs-slug">Campaign slug <span style="font-weight:400;color:var(--ink-soft)">(optional — gives you a clean short link)</span></label>
-        <div style="display:flex;gap:8px;align-items:center">
-          <span style="color:var(--ink-soft);font-size:13px;white-space:nowrap">linkway/?c=</span>
-          <input id="cs-slug" placeholder="jones2026" value="${escHtml(cfg.slug || '')}" autocomplete="off" style="font-family:var(--mono,monospace);letter-spacing:.02em">
-        </div>
-        <div style="font-size:12px;color:var(--ink-soft);margin-top:4px">Lowercase letters, numbers, and hyphens only. You add this to <code>campaigns.json</code> in GitHub after saving.</div>
-      </div>
+
       <div id="shareLinkDisplay" hidden style="word-break:break-all;font-size:12.5px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px;color:var(--ink-soft);line-height:1.6;margin-top:4px"></div>
       <div class="choices" style="margin-top:10px">
         <button class="choice" id="genShareBtn"><span class="ic">🔗</span><span>Generate share link</span></button>
@@ -1512,7 +1505,7 @@ const SCREENS = {
       cfg.earlyAction       = [cfg.earlyActionLabel, earlyDates.map(formatIsoDate).join(' & ')].filter(Boolean).join(', ');
       if (!isAppsScript && !HAS_BAKED_ENDPOINT) cfg.endpoint = node.querySelector('#cs-ep')?.value.trim() || cfg.endpoint;
       cfg.rawScript         = scriptValue;
-      cfg.slug              = (node.querySelector('#cs-slug')?.value.trim() || '').toLowerCase().replace(/[^a-z0-9-]/g, '');
+
 
       // Type-specific
       if (['primary','general'].includes(cfg.campaignType)) {
@@ -1556,23 +1549,14 @@ const SCREENS = {
 
     // ── Share link wiring ─────────────────────────────────
     // Pushing config to Sheets first means the share URL only needs to
-    // carry the deployment ID. If a slug is also set, show that as the
-    // primary "clean" link (once the organizer adds it to campaigns.json).
+    // carry the deployment ID.
     function renderShareLinkDisplay() {
       const url     = buildShareUrl();
       const display = node.querySelector('#shareLinkDisplay');
       const copyBtn = node.querySelector('#copyShareBtn');
       if (!url) return;
 
-      const slug = (cfg.slug || '').trim();
-      if (slug) {
-        const slugUrl = window.location.origin + window.location.pathname + '?c=' + slug;
-        display.innerHTML =
-          `<div style="margin-bottom:6px"><span style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);font-weight:600">Clean link (share this once campaigns.json is updated)</span><br>${escHtml(slugUrl)}</div>` +
-          `<div><span style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);font-weight:600">Fallback link (works immediately)</span><br>${escHtml(url)}</div>`;
-      } else {
-        display.textContent = url;
-      }
+      display.textContent = url;
       display.hidden = false;
       copyBtn.hidden = false;
     }
@@ -1625,11 +1609,7 @@ const SCREENS = {
     };
 
     node.querySelector('#copyShareBtn').onclick = () => {
-      // If a slug is configured, copy the clean ?c= link; otherwise the ?d= fallback.
-      const slug = (cfg.slug || '').trim();
-      const url  = slug
-        ? window.location.origin + window.location.pathname + '?c=' + slug
-        : buildShareUrl();
+      const url   = buildShareUrl();
       const label = node.querySelector('#copyShareLabel');
       if (!url) return;
       navigator.clipboard.writeText(url).then(() => {
@@ -2981,12 +2961,10 @@ function printReportHtml(html) {
 
     // Volunteer config import.
     // Resolution order (newest-to-oldest, all legacy formats still work):
-    //   ?c=<slug>   -- human-readable slug, looked up in campaigns.json
     //   ?d=<id>     -- raw Apps Script deployment ID (no encoding needed)
     //   ?ep=<b64>   -- base64(endpointUrl), legacy since 2024
     //   ?cfg=<b64>  -- base64(fullConfig),  legacy before server-side config
     const urlParams = new URLSearchParams(window.location.search);
-    const cParam    = urlParams.get('c');
     const dParam    = urlParams.get('d');
     const epParam   = urlParams.get('ep');
     const cfgParam  = urlParams.get('cfg');
@@ -3004,20 +2982,7 @@ function printReportHtml(html) {
       history.replaceState(null, '', window.location.pathname);
     }
 
-    if (cParam) {
-      // Slug lookup: fetch campaigns.json sitting next to index.html in
-      // the same GitHub Pages repo. Each entry: { "jones2026": "<deployId>" }
-      try {
-        const mapRes  = await fetch(window.location.origin + window.location.pathname.replace(/[^/]*$/, '') + 'campaigns.json');
-        const map     = await mapRes.json();
-        const depId   = map[cParam];
-        if (!depId) throw new Error('Unknown campaign slug: ' + cParam);
-        const endpoint = 'https://script.google.com/macros/s/' + depId + '/exec';
-        await importFromEndpoint(endpoint);
-      } catch(e) {
-        console.warn('Slug lookup failed:', e);
-      }
-    } else if (dParam) {
+    if (dParam) {
       // Deployment ID: reconstruct the full endpoint URL on the client.
       try {
         const endpoint = 'https://script.google.com/macros/s/' + dParam + '/exec';
