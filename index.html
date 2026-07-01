@@ -500,19 +500,28 @@ function escHtmlSafe(s) {
    AUTH
    ─────────────────────────────────────────────────────────────
    Google Sign-In, gated against this campaign's own Apps Script
-   "Approved Volunteers" tab. One shared OAuth Client ID across
-   every campaign that uses this tool. Only the Apps Script
-   endpoint (cfg.endpoint) differs per campaign, so each
-   organizer's approved list stays separate from every other
-   organizer's, even though login itself is centralized.
+   "Approved Volunteers" tab.
 
-   To change the shared Client ID (e.g. if you move to your own
-   Google Cloud project), edit GOOGLE_CLIENT_ID below. Nothing
-   else in this file needs to change.
+   HOSTING MODEL: this file is hosted as a static page (GitHub
+   Pages), with the Apps Script /exec URL below acting as the
+   backend API. The two constants below are baked in per campaign:
+
+   - GOOGLE_CLIENT_ID: this campaign's own OAuth Client ID, whose
+     Authorized JavaScript origins include the GitHub Pages domain.
+     (Google forbids googleusercontent.com as an origin, which is
+     why the frontend can't live at the /exec URL itself.)
+   - APPS_SCRIPT_URL: this campaign's Apps Script /exec endpoint.
+     Baked in here so organizers and volunteers never have to
+     paste it — boot() auto-wires it into cfg.endpoint.
    ============================================================ */
 
-const GOOGLE_CLIENT_ID = '347962833446-q6bb44u234bs495i6v24n8ve703berm6.apps.googleusercontent.com'; // your new Client ID
-const APPS_SCRIPT_URL  = 'https://script.google.com/macros/s/AKfycbxSQPpsF16ugGXSIs-lSJfUqhXbYjYbot5xKVtqOeU2uWKxkPRv64YB-B5d_3kKB4m0RQ/exec'; // your Apps Script /exec URL
+const GOOGLE_CLIENT_ID = '347962833446-q6bb44u234bs495i6v24n8ve703berm6.apps.googleusercontent.com';
+const APPS_SCRIPT_URL  = 'https://script.google.com/macros/s/AKfycbxSQPpsF16ugGXSIs-lSJfUqhXbYjYbot5xKVtqOeU2uWKxkPRv64YB-B5d_3kKB4m0RQ/exec';
+
+// True when the endpoint above is baked in — the "Google Sheets submit
+// link" field in Campaign Setup is hidden in that case, since there is
+// nothing for the organizer to paste.
+const HAS_BAKED_ENDPOINT = typeof APPS_SCRIPT_URL === 'string' && APPS_SCRIPT_URL.startsWith('http');
 
 // Current signed-in volunteer. Persisted so they don't have to
 // sign in again every time they open the tool on the same device.
@@ -630,7 +639,11 @@ function isAdmin() {
 function showSignin() {
   document.getElementById('appWrap').hidden = true;
   document.getElementById('signinWrap').hidden = false;
-  if (window.google) {
+  if (window.google && window.google.accounts) {
+    // Note: window.google is *always* truthy inside Apps Script (it injects
+    // its own google.script object), so we specifically check google.accounts
+    // here — that's the piece that only exists once the separate GIS sign-in
+    // library (https://accounts.google.com/gsi/client) has actually loaded.
     google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredential });
     google.accounts.id.renderButton(document.getElementById('gsiButton'), { theme: 'filled_blue', size: 'large', shape: 'pill' });
   } else {
@@ -1256,8 +1269,12 @@ const SCREENS = {
         <div class="body" id="scriptPreviewBody"></div>
       </details>
 
-      <!-- ── App settings ── -->
-      ${!isAppsScript ? `
+      <!-- ── App settings ──
+           Only shown when no endpoint is baked into this file AND we're
+           not running inside Apps Script (where it's auto-detected).
+           With HAS_BAKED_ENDPOINT, boot() wires cfg.endpoint automatically
+           and there is nothing for the organizer to paste. -->
+      ${(!isAppsScript && !HAS_BAKED_ENDPOINT) ? `
       <div class="section">
         <div class="section-head">App settings</div>
       </div>
@@ -1453,7 +1470,7 @@ const SCREENS = {
       cfg.earlyActionLabel  = getEarlyLabel();
       cfg.earlyActionDates  = earlyDates;
       cfg.earlyAction       = [cfg.earlyActionLabel, earlyDates.map(formatIsoDate).join(' & ')].filter(Boolean).join(', ');
-      if (!isAppsScript) cfg.endpoint = node.querySelector('#cs-ep')?.value.trim() || cfg.endpoint;
+      if (!isAppsScript && !HAS_BAKED_ENDPOINT) cfg.endpoint = node.querySelector('#cs-ep')?.value.trim() || cfg.endpoint;
       cfg.rawScript         = scriptValue;
 
       // Type-specific
@@ -2926,50 +2943,16 @@ function printReportHtml(html) {
     if (auth.approved && auth.email) {
       // Already signed in on this device — skip straight to the app.
       enterApp();
-    } else if (window.google && window.google.script && window.google.script.run) {
-      // Self-hosted in Apps Script: the visitor is already authenticated to
-      // Google just by opening the URL. Get their identity server-side —
-      // no GIS button or OAuth popup needed.
-      document.getElementById("signinWrap").hidden = false;
-      document.getElementById("appWrap").hidden = true;
-      renderSigninStatus("Checking your access…");
-      google.script.run
-        .withSuccessHandler(async function(result) {
-          try {
-            if (result && result.ok && result.approved) {
-              auth = {
-                email:    result.email,
-                name:     result.name || result.email,
-                approved: true,
-                role:     result.role || "Volunteer",
-              };
-              await saveAuth();
-              cfg.canvasser = auth.name;
-              await saveCfg();
-              enterApp();
-            } else if (result && result.email) {
-              renderSigninStatus(
-                result.email + " is not on this campaign's approved volunteer list. " +
-                "Ask your organizer to add you."
-              );
-            } else {
-              renderSigninStatus(
-                "Could not verify your identity. Make sure you are signed into " +
-                "Google and try reloading the page."
-              );
-            }
-          } catch(err) {
-            renderFatalError(err, "boot-auth");
-          }
-        })
-        .withFailureHandler(function(err) {
-          renderSigninStatus(
-            "Could not check your access. Try reloading the page. (" +
-            ((err && err.message) || "unknown error") + ")"
-          );
-        })
-        .getSignedInUser();
     } else {
+      // Always show the explicit "Sign in with Google" button, even when
+      // running inside Apps Script. We used to try silent server-side
+      // detection via Session.getActiveUser() here, but that call returns
+      // an empty email for a lot of real visitors (different browser
+      // profile, not actively signed into Google at that moment, etc.),
+      // which showed them a dead-end "Could not verify your identity"
+      // screen with nothing to click. The explicit button always works,
+      // and checkApproved() still uses google.script.run under the hood
+      // to check the Approved Volunteers tab once they pick an account.
       showSignin();
     }
   } catch (err) {
