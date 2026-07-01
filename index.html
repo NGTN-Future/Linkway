@@ -1139,6 +1139,7 @@ const SCREENS = {
         <input id="cs-early-label-custom" placeholder="Type your own title" style="margin-top:6px;display:none">
         <label for="cs-early-picker" style="margin-top:10px;display:block">Add a date (optional, can add more than one)</label>
         <input id="cs-early-picker" type="date" aria-label="Pick a date to add to early voting">
+        <div class="section-sub" style="margin-top:6px">Each date you pick is added as a bubble below. Tap a bubble's &#10005; to remove that date.</div>
         <div class="seg" id="cs-early-dates" style="margin-top:8px;flex-wrap:wrap"></div>
         <div class="section-sub" id="cs-early-preview" style="margin-top:4px"></div>
       </div>
@@ -1270,7 +1271,8 @@ const SCREENS = {
         </div>
       </div>
       <div class="field">
-        <label for="cs-script">Paste your script</label>
+        <label for="cs-script">&#9997;&#65039; Write or paste your script in the box below</label>
+        <div class="section-sub" style="margin-bottom:6px">This big text box is where your whole script lives. Type it directly here or paste it from another document &mdash; just keep the <code>##</code> header lines so the app knows where each step begins.</div>
         <textarea id="cs-script" rows="14" placeholder="##REACH&#10;Your opening line when someone answers.&#10;&#10;##INTRO&#10;Who you are and why you're reaching out.&#10;&#10;##LISTEN&#10;What you ask to hear their concerns. (optional)&#10;&#10;##CASE&#10;The case you make for your candidate or cause. (optional)&#10;&#10;##SUPPORT&#10;How you ask where they stand. (optional)&#10;&#10;##COMMIT&#10;The specific ask you make.&#10;&#10;##WRAP&#10;How you close the conversation.&#10;&#10;##OBJECTIONS&#10;Q: A common objection you hear.&#10;A: How you respond to it.">${escHtml(cfg.rawScript)}</textarea>
       </div>
       <div class="warning-box" id="scriptValidationMsg" hidden></div>
@@ -1409,6 +1411,10 @@ const SCREENS = {
     const earlyDatesEl     = node.querySelector('#cs-early-dates');
     const earlyPreviewEl   = node.querySelector('#cs-early-preview');
     function renderEarlyDates() {
+      if (!earlyDates.length) {
+        earlyDatesEl.innerHTML = '<span style="color:var(--faint);font-size:.85em">No dates added yet &mdash; dates you pick above will appear here.</span>';
+        return;
+      }
       earlyDatesEl.innerHTML = earlyDates.map((iso, i) =>
         `<button type="button" data-i="${i}" style="display:flex;align-items:center;gap:6px">${formatIsoDate(iso)} ✕</button>`
       ).join('');
