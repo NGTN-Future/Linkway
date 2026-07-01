@@ -1,0 +1,2982 @@
+<!-- ============================================================
+     Universal Campaign Canvassing Tool
+     Self-contained. Works in Claude (window.storage) and as a
+     downloaded file (localStorage fallback, then session memory).
+     ============================================================ -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+<style>
+  /* ── Design tokens ─────────────────────────────────────── */
+  :root {
+    --ink:        #16243B;
+    --ink-soft:   #48586F;
+    --faint:      #7C8AA0;
+    --line:       #E1E7F0;
+    --bg:         #EAEEF4;
+    --surface:    #FFFFFF;
+    --blue:       #2456C6;
+    --blue-d:     #1A409A;
+    --blue-tint:  #EAF0FC;
+    --amber:      #E89A2B;
+    --amber-tint: #FCF2DF;
+
+    /* Support-scale colours (1 = strong support → 5 = strong oppose) */
+    --s1: #1C8C57;
+    --s2: #5DA94B;
+    --s3: #E0A02E;
+    --s4: #E27038;
+    --s5: #CF3C3C;
+
+    --ok:   #1C8C57;
+    --warn: #CF3C3C;
+
+    --r:      16px;
+    --tap:    58px;
+    --shadow: 0 1px 2px rgba(20,36,59,.06), 0 8px 24px rgba(20,36,59,.08);
+
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+                 Helvetica, Arial, sans-serif;
+  }
+
+  /* Make the `hidden` attribute always win, even on elements that
+     also have a `display` rule (like .wrap). Without this, the
+     browser's low-priority default [hidden]{display:none} loses
+     to our own .wrap{display:flex} rule, and "hidden" elements
+     stay visible. */
+  [hidden] { display: none !important; }
+
+  /* Reset & base */
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    -webkit-text-size-adjust: 100%;
+    line-height: 1.45;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  button { font: inherit; cursor: pointer; border: 0; background: none; color: inherit; }
+  .wrap  { max-width: 560px; margin: 0 auto; min-height: 100dvh; display: flex; flex-direction: column; }
+
+  /* ── Top bar ────────────────────────────────────────────── */
+  .top {
+    position: sticky; top: 0; z-index: 20;
+    background: var(--surface); border-bottom: 1px solid var(--line);
+    padding: 10px 14px; display: flex; align-items: center; gap: 10px;
+  }
+  .brand { display: flex; flex-direction: column; line-height: 1.05; margin-right: auto; }
+  .brand b    { font-size: 15px; letter-spacing: .2px; }
+  .brand span { font-size: 11px; color: var(--faint); font-weight: 600;
+                letter-spacing: .6px; text-transform: uppercase; }
+  .modeToggle {
+    display: flex; background: var(--bg); border-radius: 999px;
+    padding: 3px; font-weight: 700; font-size: 13px;
+  }
+  .modeToggle button           { padding: 7px 12px; border-radius: 999px; color: var(--ink-soft); }
+  .modeToggle button[aria-pressed="true"] { background: var(--blue); color: #fff; box-shadow: var(--shadow); }
+  .logBtn {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--blue-tint); color: var(--blue-d);
+    font-weight: 800; font-size: 13px; padding: 9px 12px; border-radius: 999px;
+  }
+  .logBtn b {
+    background: var(--blue); color: #fff; border-radius: 999px;
+    min-width: 20px; height: 20px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 12px; padding: 0 5px;
+  }
+
+  /* ── Main content ───────────────────────────────────────── */
+  main { flex: 1; padding: 18px 16px 96px; display: flex; flex-direction: column; }
+  .eyebrow {
+    font-size: 12px; font-weight: 800; letter-spacing: .9px;
+    text-transform: uppercase; color: var(--blue);
+  }
+
+  /* Progress rail */
+  .rail { display: flex; gap: 5px; margin: 10px 0 18px; }
+  .rail i { height: 5px; flex: 1; border-radius: 99px; background: var(--line); }
+  .rail i.on   { background: var(--blue); }
+  .rail i.done { background: var(--s2); }
+
+  /* Script card */
+  .say {
+    background: #FBFCFE; border: 1px solid var(--line);
+    border-left: 5px solid var(--blue);
+    border-radius: 14px; padding: 18px; box-shadow: var(--shadow);
+  }
+  .say .tag {
+    font-size: 11px; font-weight: 800; letter-spacing: .8px;
+    text-transform: uppercase; color: var(--blue);
+    margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+  }
+  .say .tag::before { content: "🗣"; font-size: 13px; }
+  .say p              { margin: 0 0 12px; font-size: 21px; line-height: 1.42; font-weight: 520; }
+  .say p:last-child   { margin-bottom: 0; }
+  .say em             { color: var(--blue-d); font-style: normal; font-weight: 700; }
+
+  .hint {
+    margin-top: 12px; font-size: 13.5px; color: var(--ink-soft);
+    background: var(--amber-tint); border-radius: 10px; padding: 10px 12px; line-height: 1.4;
+  }
+  .hint b { color: var(--ink); }
+  .cue    { margin-top: 12px; font-size: 13.5px; color: var(--ink-soft); font-style: italic; }
+
+  /* Choice buttons */
+  .choices { display: flex; flex-direction: column; gap: 12px; margin-top: 18px; }
+  .choice {
+    min-height: var(--tap); border-radius: 14px;
+    background: var(--blue-tint); border: 2px solid var(--blue); color: var(--blue-d);
+    padding: 14px 16px; font-size: 17px; font-weight: 750; text-align: left;
+    box-shadow: 0 2px 0 var(--blue-d), var(--shadow);
+    display: flex; align-items: center; gap: 12px;
+    transition: transform .06s ease, box-shadow .06s ease;
+  }
+  .choice:active { transform: translateY(2px); box-shadow: 0 0 0 var(--blue-d), var(--shadow); }
+  .choice .ic {
+    font-size: 15px; width: 26px; height: 26px; flex: none;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--blue); color: #fff; border-radius: 999px;
+  }
+  /* Primary / go action */
+  .choice.go {
+    background: var(--blue); color: #fff; border-color: var(--blue-d);
+    justify-content: center; font-weight: 850; font-size: 18px;
+    box-shadow: 0 3px 0 var(--blue-d), var(--shadow);
+  }
+  .choice.go:active { box-shadow: 0 0 0 var(--blue-d), var(--shadow); }
+  .choice.go .ic    { background: rgba(255,255,255,.25); }
+  /* Soft / secondary action */
+  .choice.soft {
+    background: var(--surface); border: 2px solid var(--line); color: var(--ink-soft);
+    box-shadow: 0 2px 0 #C9D2E0, var(--shadow); font-weight: 700;
+  }
+  .choice.soft:active { box-shadow: 0 0 0 #C9D2E0, var(--shadow); }
+  .choice.soft .ic    { background: var(--faint); color: #fff; }
+
+  /* Support scale */
+  .scale { display: flex; flex-direction: column; gap: 9px; margin-top: 18px; }
+  .sbtn {
+    min-height: 56px; border-radius: 13px; color: #fff;
+    font-weight: 800; font-size: 16px; text-align: left;
+    padding: 0 16px; display: flex; align-items: center; gap: 14px;
+    box-shadow: 0 3px 0 rgba(0,0,0,.18), var(--shadow);
+    transition: transform .06s, box-shadow .06s;
+  }
+  .sbtn:active { transform: translateY(2px); box-shadow: 0 0 0 rgba(0,0,0,.18), var(--shadow); }
+  .sbtn .num   { font-size: 22px; width: 30px; flex: none; text-align: center; }
+  .sbtn small  { font-weight: 600; opacity: .92; font-size: 13.5px; }
+  .sb1 { background: var(--s1); } .sb2 { background: var(--s2); }
+  .sb3 { background: var(--s3); } .sb4 { background: var(--s4); }
+  .sb5 { background: var(--s5); }
+
+  /* Issue / topic chips */
+  .chips { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
+  .chip {
+    min-height: 60px; border-radius: 13px;
+    background: var(--blue-tint); border: 2px solid var(--blue); color: var(--blue-d);
+    padding: 10px 13px; font-size: 15px; font-weight: 750; text-align: left;
+    box-shadow: 0 2px 0 var(--blue-d), var(--shadow);
+    display: flex; align-items: center;
+    transition: transform .06s, box-shadow .06s;
+  }
+  .chip:active        { transform: translateY(2px); box-shadow: 0 0 0 var(--blue-d), var(--shadow); }
+  .chip:focus-visible { outline: 2px solid var(--blue-d); outline-offset: 2px; }
+
+  /* Optional capture toggles */
+  .extras   { margin-top: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 6px 14px; }
+  .exhead   { font-size: 12px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; color: var(--faint); padding: 10px 0 4px; }
+  .exrow    { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); }
+  .exrow:first-of-type { border-top: 0; }
+  .exlabel  { font-size: 14.5px; font-weight: 650; margin-right: auto; }
+  .seg      { display: flex; gap: 6px; flex-wrap: wrap; }
+  .seg button { border: 1.5px solid var(--line); background: var(--surface); border-radius: 999px; padding: 7px 12px; font-size: 13.5px; font-weight: 700; color: var(--ink-soft); }
+  .seg button[aria-pressed="true"] { background: var(--blue); color: #fff; border-color: var(--blue); }
+
+  /* Session stats */
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 4px 0 12px; }
+  .stat  { background: var(--bg); border-radius: 12px; padding: 10px 12px; }
+  .stat b    { display: block; font-size: 20px; }
+  .stat span { font-size: 12px; color: var(--faint); font-weight: 700; }
+
+  /* Wrap / result summary */
+  .summary     { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
+  .summary .row { display: flex; justify-content: space-between; gap: 12px; padding: 13px 16px; border-bottom: 1px solid var(--line); font-size: 15px; }
+  .summary .row:last-child { border-bottom: 0; }
+  .summary .row span { color: var(--faint); font-weight: 600; }
+  .summary .row b    { text-align: right; }
+  .pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 13px; font-weight: 800; }
+  .note         { margin-top: 14px; }
+  .note label   { font-size: 12px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; color: var(--faint); }
+  textarea { width: 100%; margin-top: 6px; border: 1.5px solid var(--line); border-radius: 12px; padding: 12px; font: inherit; font-size: 16px; resize: vertical; min-height: 70px; background: var(--surface); }
+  textarea:focus, input:focus { outline: none; border-color: var(--blue); }
+
+  /* Setup / config screen */
+  .setup .field   { margin-top: 14px; }
+  .setup label    { font-size: 12px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; color: var(--faint); }
+  .setup input    { width: 100%; margin-top: 6px; border: 1.5px solid var(--line); border-radius: 12px; padding: 13px; font: inherit; font-size: 17px; background: var(--surface); }
+  .setup select   { width: 100%; margin-top: 6px; border: 1.5px solid var(--line); border-radius: 12px; padding: 13px; font: inherit; font-size: 17px; background: var(--surface); color: var(--ink); appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237C8AA0' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; }
+  .setup .lead    { font-size: 15px; color: var(--ink-soft); margin: 4px 0 0; }
+  .setup .section { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); }
+  .setup .section-head { font-size: 13px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; color: var(--blue); margin-bottom: 2px; }
+  .setup .section-sub  { font-size: 13px; color: var(--faint); }
+  .setup .toggle-row   { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+  .setup .toggle-row:first-of-type { border-top: 0; }
+  .setup .toggle-label { font-size: 14.5px; font-weight: 650; flex: 1; }
+  .setup .toggle-sub   { font-size: 12.5px; color: var(--faint); display: block; }
+
+  details.cfg { margin-top: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
+  details.cfg summary  { padding: 14px 16px; font-weight: 800; cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px; }
+  details.cfg summary::-webkit-details-marker { display: none; }
+  details.cfg .body    { padding: 0 16px 16px; }
+
+  /* Type badge in top bar */
+  .type-badge { font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: var(--blue-tint); color: var(--blue-d); letter-spacing: .4px; white-space: nowrap; }
+
+  /* Bottom bar */
+  .bottom {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 20;
+    background: var(--surface); border-top: 1px solid var(--line);
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+    display: flex; gap: 10px; align-items: center;
+  }
+  .bottom .who { margin-right: auto; font-size: 13px; color: var(--faint); font-weight: 700; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .bottom .who b { color: var(--ink); }
+  .miniBtn       { border: 1.5px solid var(--line); border-radius: 999px; padding: 9px 14px; font-weight: 800; font-size: 13px; background: var(--surface); white-space: nowrap; }
+  .miniBtn.alarm { border-color: var(--amber); color: var(--amber); }
+  .miniBtn.guide { border-color: var(--blue); color: var(--blue-d); background: var(--blue-tint); }
+  @media (max-width: 400px) { .bottom .who { display: none; } .bottom { gap: 8px; } .miniBtn { padding: 9px 12px; } }
+
+  /* Bottom sheet */
+  .scrim  { position: fixed; inset: 0; background: rgba(16,24,40,.45); z-index: 30; opacity: 0; pointer-events: none; transition: opacity .2s; }
+  .scrim.open { opacity: 1; pointer-events: auto; }
+  .sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 31;
+    background: var(--surface); border-radius: 20px 20px 0 0;
+    max-width: 560px; margin: 0 auto;
+    transform: translateY(102%); transition: transform .26s cubic-bezier(.2,.7,.2,1);
+    max-height: 86dvh; display: flex; flex-direction: column;
+  }
+  .sheet.open      { transform: translateY(0); }
+  .sheet header    { padding: 16px; display: flex; align-items: center; border-bottom: 1px solid var(--line); }
+  .sheet header h3 { margin: 0; font-size: 17px; }
+  .sheet header button { margin-left: auto; font-size: 14px; font-weight: 800; color: var(--blue); padding: 6px; }
+  .sheet .scroll   { overflow: auto; padding: 8px 16px 24px; }
+  .faq      { padding: 14px 0; border-bottom: 1px solid var(--line); }
+  .faq:last-child  { border-bottom: 0; }
+  .faq h4   { margin: 0 0 6px; font-size: 15px; }
+  .faq p    { margin: 0; font-size: 15px; color: var(--ink-soft); line-height: 1.5; }
+  .faq .reply { border-left: 3px solid var(--blue); padding-left: 11px; }
+  .logitem  { padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+  .logitem:last-child { border-bottom: 0; }
+  .logitem b    { font-size: 15px; }
+  .logitem .meta { color: var(--faint); font-size: 13px; margin-top: 2px; }
+  .sendtag       { font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px; margin-left: 6px; white-space: nowrap; }
+  .sendtag.sent  { background: #E4F3EA; color: var(--ok); }
+  .sendtag.pend  { background: var(--amber-tint); color: #9A6A12; }
+  .submitbar     { background: var(--blue-tint); border: 1px solid #CFE0FA; border-radius: 12px; padding: 12px 14px; margin: 4px 0 12px; font-size: 14px; }
+  .submitbar b   { color: var(--blue-d); }
+  .sheetActions  { display: flex; flex-wrap: wrap; gap: 10px; padding: 14px 16px; border-top: 1px solid var(--line); }
+  .sheetActions button       { flex: 1; min-height: 50px; border-radius: 12px; font-weight: 800; font-size: 15px; }
+  .sheetActions #submitBtn   { flex-basis: 100%; min-height: 54px; font-size: 16px; }
+  .sheetActions #submitBtn:disabled { opacity: .7; }
+  .primary { background: var(--blue); color: #fff; }
+  .ghost   { border: 1.5px solid var(--line); color: var(--ink); }
+  .danger  { color: var(--warn); border: 1.5px solid var(--warn); }
+  .empty   { color: var(--faint); text-align: center; padding: 30px 10px; font-size: 15px; }
+  .warning-box { background: var(--amber-tint); border: 1px solid var(--amber); border-radius: 11px; padding: 11px 13px; font-size: 13.5px; color: var(--ink-soft); line-height: 1.5; margin-top: 12px; }
+  .warning-box b { color: var(--ink); }
+
+  /* Guide sheet */
+  .guidewrap h4  { margin: 18px 0 6px; font-size: 15px; color: var(--blue-d); display: flex; align-items: center; gap: 8px; }
+  .guidewrap h4:first-child { margin-top: 6px; }
+  .guidewrap p   { margin: 0 0 10px; font-size: 14.5px; color: var(--ink-soft); line-height: 1.55; }
+  .guidewrap ol, .guidewrap ul { margin: 0 0 12px; padding-left: 20px; }
+  .guidewrap li  { font-size: 14.5px; color: var(--ink-soft); line-height: 1.5; margin-bottom: 7px; }
+  .guidewrap b   { color: var(--ink); }
+  .gcallout      { background: var(--amber-tint); border-radius: 11px; padding: 11px 13px; margin: 4px 0 14px; font-size: 13.5px; color: var(--ink-soft); line-height: 1.5; }
+  .gcallout b    { color: var(--ink); }
+  .gkey  { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; }
+  .gchip { flex: none; font-size: 12px; font-weight: 800; padding: 3px 9px; border-radius: 999px; color: #fff; min-width: 54px; text-align: center; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+
+<!-- ── HTML shell ──────────────────────────────────────────── -->
+<div class="wrap" id="appWrap" hidden>
+  <div class="top">
+    <div class="brand">
+      <b id="topOrg">Canvassing Tool</b>
+      <span id="topSub">Loading…</span>
+    </div>
+    <span class="type-badge" id="typeBadge" hidden></span>
+    <div class="modeToggle" role="group" aria-label="Contact method">
+      <button id="mPhone" aria-pressed="true" onclick="setMode('phone')">Phone</button>
+      <button id="mDoor"  aria-pressed="false" onclick="setMode('door')">Door</button>
+    </div>
+    <button class="logBtn" onclick="openSheet('log')">Log <b id="logCount">0</b></button>
+  </div>
+
+  <main id="main"><!-- rendered by JS --></main>
+
+  <div class="bottom">
+    <div class="who" id="whoBar">No contact started</div>
+    <button class="miniBtn guide" onclick="openSheet('guide')">Guide</button>
+    <button class="miniBtn alarm" onclick="openSheet('faq')">Objections</button>
+    <button class="miniBtn"       onclick="restartContact()">Restart</button>
+    <button class="miniBtn"       onclick="signOut()">Sign out</button>
+  </div>
+</div>
+
+<!-- ── Sign-in screen (shown before the app loads) ────────── -->
+<div class="wrap" id="signinWrap">
+  <main style="justify-content:center; align-items:center; text-align:center; padding:24px;">
+    <div style="max-width:340px">
+      <div class="eyebrow" style="margin-bottom:6px">Volunteer sign-in</div>
+      <h1 style="font-size:22px; margin:0 0 8px">Sign in to canvass</h1>
+      <p style="color:var(--ink-soft); font-size:15px; margin:0 0 22px">
+        Sign in with the Google account your campaign organizer approved.
+      </p>
+      <div id="gsiButton" style="display:flex; justify-content:center"></div>
+      <p id="signinStatus" style="margin-top:16px; font-size:14px; color:var(--faint)"></p>
+    </div>
+  </main>
+</div>
+
+<div class="scrim" id="scrim" onclick="closeSheet()"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true">
+  <header><h3 id="sheetTitle"></h3><button onclick="closeSheet()">Close</button></header>
+  <div class="scroll"      id="sheetBody"></div>
+  <div class="sheetActions" id="sheetActions" hidden></div>
+</div>
+
+
+<script>
+/* ============================================================
+   SCRIPT PARSING (organizer-authored content)
+   ─────────────────────────────────────────────────────────────
+   Organizers paste ONE script into Campaign Setup, marked into
+   sections with "## SLOTNAME" headers. We slice it into slots
+   here. Slot text still goes through fill() at render time, so
+   {ctaDate}, {candidate}, etc. keep working inside pasted text.
+
+   Recognized slot markers (case-insensitive, extra #/spaces OK):
+   REACH, INTRO, LISTEN, CASE, SUPPORT, COMMIT, WRAP, OBJECTIONS
+
+   OBJECTIONS gets a second-pass parse: lines/paragraphs starting
+   with "Q:" and "A:" become {prompt, response} pairs. If no Q:/A:
+   labels are found, we fall back to treating alternating
+   blank-line-separated paragraphs as prompt, response, prompt...
+   ============================================================ */
+
+const SLOT_NAMES = ['reach','intro','listen','case','support','commit','wrap','objections'];
+
+// Aliases tolerate minor wording differences organizers might use
+const SLOT_ALIASES = {
+  reach: 'reach', reachout: 'reach',
+  intro: 'intro', introduction: 'intro', opener: 'intro', open: 'intro',
+  listen: 'listen', ask: 'listen',
+  case: 'case', pitch: 'case', maketheCase: 'case',
+  support: 'support', scale: 'support', wherethattheystand: 'support',
+  commit: 'commit', theask: 'commit', closeask: 'commit', ask2: 'commit',
+  wrap: 'wrap', close: 'wrap', closing: 'wrap',
+  objections: 'objections', faq: 'objections', objection: 'objections',
+};
+
+function normalizeSlotKey(raw) {
+  const key = raw.toLowerCase().replace(/[^a-z0-9]/g, '');
+  return SLOT_ALIASES[key] || (SLOT_NAMES.includes(key) ? key : null);
+}
+
+// Splits raw objection text into {prompt, response} pairs.
+function parseObjections(raw) {
+  if (!raw || !raw.trim()) return [];
+  const text = raw.trim();
+
+  // Preferred format: "Q: ..." / "A: ..." lines, possibly multi-line
+  // until the next Q:. We scan line by line.
+  const lines = text.split('\n');
+  const hasQA = lines.some(l => /^\s*Q\s*[:.]/i.test(l));
+
+  if (hasQA) {
+    const pairs = [];
+    let current = null;
+    for (const line of lines) {
+      const qMatch = line.match(/^\s*Q\s*[:.]\s*(.*)$/i);
+      const aMatch = line.match(/^\s*A\s*[:.]\s*(.*)$/i);
+      if (qMatch) {
+        if (current && current.prompt) pairs.push(current);
+        current = { prompt: qMatch[1].trim(), response: '' };
+      } else if (aMatch && current) {
+        current.response = (current.response ? current.response + ' ' : '') + aMatch[1].trim();
+      } else if (current && line.trim()) {
+        // Continuation line of whichever field is currently open
+        current.response = (current.response ? current.response + ' ' : '') + line.trim();
+      }
+    }
+    if (current && current.prompt) pairs.push(current);
+    return pairs.filter(p => p.prompt);
+  }
+
+  // Fallback: alternate blank-line-separated paragraphs as prompt/response
+  const paras = text.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+  const pairs = [];
+  for (let i = 0; i < paras.length; i += 2) {
+    if (paras[i]) pairs.push({ prompt: paras[i], response: paras[i + 1] || '' });
+  }
+  return pairs;
+}
+
+// Parses the full organizer script into slot text + objections array.
+// Returns { slots: {reach:'',intro:'',...}, objections: [...], unplaced: '' }
+function parseOrganizerScript(raw) {
+  const slots = { reach: '', intro: '', listen: '', case: '', support: '', commit: '', wrap: '' };
+  let objectionsRaw = '';
+  let unplaced = '';
+
+  if (!raw || !raw.trim()) {
+    return { slots, objections: [], unplaced: '' };
+  }
+
+  // Match headers like "## REACH", "### Intro", "##INTRO:" etc.
+  const headerRe = /^#{1,6}\s*([A-Za-z][A-Za-z0-9 _\-]*)\s*:?\s*$/;
+  const lines = raw.split('\n');
+  let activeSlot = null;
+  let buffer = [];
+
+  function flush() {
+    const text = buffer.join('\n').trim();
+    buffer = [];
+    if (!activeSlot) { unplaced += (unplaced ? '\n\n' : '') + text; return; }
+    if (activeSlot === 'objections') objectionsRaw += (objectionsRaw ? '\n\n' : '') + text;
+    else slots[activeSlot] = (slots[activeSlot] ? slots[activeSlot] + '\n\n' : '') + text;
+  }
+
+  for (const line of lines) {
+    const m = line.match(headerRe);
+    if (m) {
+      flush();
+      activeSlot = normalizeSlotKey(m[1].trim());
+    } else {
+      buffer.push(line);
+    }
+  }
+  flush();
+
+  return { slots, objections: parseObjections(objectionsRaw), unplaced: unplaced.trim() };
+}
+
+// Get this campaign's parsed script (memoized off cfg.rawScript).
+let _parsedScriptCache = { raw: null, parsed: null };
+function getParsedScript() {
+  if (_parsedScriptCache.raw !== cfg.rawScript) {
+    _parsedScriptCache.raw = cfg.rawScript;
+    _parsedScriptCache.parsed = parseOrganizerScript(cfg.rawScript);
+  }
+  return _parsedScriptCache.parsed;
+}
+
+// Convenience: get a single slot's filled text, or a fallback if blank.
+function slotHtml(slotName, extras = {}, fallback = '') {
+  const parsed = getParsedScript();
+  const raw = parsed.slots[slotName];
+  if (!raw || !raw.trim()) return fallback;
+  // Preserve paragraph breaks as <p> tags, single line breaks as <br>
+  return raw.split(/\n\s*\n/).map(p => `<p>${fill(escHtmlSafe(p), extras).replace(/\n/g, '<br>')}</p>`).join('');
+}
+
+// Minimal HTML-escape for organizer-pasted text (script may contain
+// raw text with <, >, & that shouldn't be interpreted as markup).
+// Note: fill() runs on the escaped text, so {var} braces survive escaping.
+function escHtmlSafe(s) {
+  return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+
+/* ============================================================
+   AUTH
+   ─────────────────────────────────────────────────────────────
+   Google Sign-In, gated against this campaign's own Apps Script
+   "Approved Volunteers" tab. One shared OAuth Client ID across
+   every campaign that uses this tool. Only the Apps Script
+   endpoint (cfg.endpoint) differs per campaign, so each
+   organizer's approved list stays separate from every other
+   organizer's, even though login itself is centralized.
+
+   To change the shared Client ID (e.g. if you move to your own
+   Google Cloud project), edit GOOGLE_CLIENT_ID below. Nothing
+   else in this file needs to change.
+   ============================================================ */
+
+const GOOGLE_CLIENT_ID = '<?= GOOGLE_CLIENT_ID ?>';
+const APPS_SCRIPT_URL  = '<?= APPS_SCRIPT_URL ?>';
+
+// Current signed-in volunteer. Persisted so they don't have to
+// sign in again every time they open the tool on the same device.
+let auth = { email: '', name: '', approved: false, role: 'Volunteer' };
+
+async function loadAuth() {
+  const raw = await store.get('auth');
+  if (raw) {
+    try {
+      const stored = JSON.parse(raw);
+      // Sessions saved before the role field existed have no `role` key.
+      // Those users already had full access under the old behavior, so
+      // treat a missing role (on an already-approved session) as Admin
+      // rather than silently downgrading them to Volunteer.
+      if (stored.approved && !stored.role) {
+        stored.role = 'Admin';
+        Object.assign(auth, stored);
+        await saveAuth();
+      } else {
+        Object.assign(auth, stored);
+      }
+    } catch(e) {}
+  }
+}
+async function saveAuth() {
+  await store.set('auth', JSON.stringify(auth));
+}
+async function clearAuth() {
+  auth = { email: '', name: '', approved: false, role: 'Volunteer' };
+  await store.set('auth', JSON.stringify(auth));
+}
+
+// Decode a Google ID token (JWT) without a library. We only need
+// the payload, and Google's signature is already verified by the
+// fact that the token came back from their own sign-in widget.
+function decodeJwt(token) {
+  const payload = token.split('.')[1];
+  const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+  return JSON.parse(json);
+}
+
+// Ask this campaign's own Apps Script whether an email is on
+// their Approved Volunteers tab. Each campaign's endpoint only
+// knows about its own sheet, so approval lists never cross over.
+async function checkApproved(email) {
+  // When running inside Apps Script, use google.script.run — this is the
+  // reliable path. fetch() to the same /exec URL gets intercepted by
+  // Google's auth layer inside the sandboxed iframe and breaks silently.
+  if (window.google && window.google.script && window.google.script.run) {
+    return new Promise((resolve) => {
+      google.script.run
+        .withSuccessHandler((result) => resolve(result || { ok: false, reason: 'network' }))
+        .withFailureHandler(() => resolve({ ok: false, reason: 'network' }))
+        .checkVolunteerClient(email);
+    });
+  }
+
+  // Fallback: fetch (for Netlify-hosted or local dev)
+  if (!cfg.endpoint) {
+    return { ok: false, reason: 'no-endpoint' };
+  }
+  try {
+    const url = cfg.endpoint + '?action=checkVolunteer&email=' + encodeURIComponent(email);
+    const res = await fetch(url);
+    const out = await res.json();
+    return out;
+  } catch(e) {
+    return { ok: false, reason: 'network' };
+  }
+}
+
+function renderSigninStatus(msg) {
+  document.getElementById('signinStatus').textContent = msg || '';
+}
+
+async function handleCredential(response) {
+  const profile = decodeJwt(response.credential);
+  renderSigninStatus('Checking approved volunteer list…');
+
+  const result = await checkApproved(profile.email);
+
+  if (result.reason === 'no-endpoint') {
+    renderSigninStatus('Signed in, but no campaign is configured on this device yet. Continuing to setup.');
+    // No backend yet means nobody has set up Approved Volunteers either,
+    // so this person is bootstrapping the campaign. Grant Admin so they
+    // can reach Campaign Setup; once an endpoint and roles exist, normal
+    // role checks take over for everyone, including this device.
+    auth = { email: profile.email, name: profile.name, approved: true, role: 'Admin' };
+    await saveAuth();
+    enterApp();
+    return;
+  }
+
+  if (result.reason === 'network') {
+    renderSigninStatus("Could not reach the campaign's approved list. Check your connection and try again.");
+    return;
+  }
+
+  if (!result.ok || !result.approved) {
+    renderSigninStatus(`${profile.email} is not on this campaign's approved volunteer list. Ask your organizer to add you.`);
+    return;
+  }
+
+  auth = { email: profile.email, name: profile.name, approved: true, role: result.role === 'Admin' ? 'Admin' : 'Volunteer' };
+  await saveAuth();
+  cfg.canvasser = profile.name; // auto-fill canvasser name from Google profile
+  await saveCfg();
+  enterApp();
+}
+
+function isAdmin() {
+  return auth.role === 'Admin';
+}
+
+function showSignin() {
+  document.getElementById('appWrap').hidden = true;
+  document.getElementById('signinWrap').hidden = false;
+  if (window.google) {
+    google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredential });
+    google.accounts.id.renderButton(document.getElementById('gsiButton'), { theme: 'filled_blue', size: 'large', shape: 'pill' });
+  } else {
+    renderSigninStatus('Google Sign-In is still loading, one moment...');
+    setTimeout(showSignin, 400);
+  }
+}
+
+function enterApp() {
+  try {
+    document.getElementById('signinWrap').hidden = true;
+    document.getElementById('appWrap').hidden = false;
+    if (!cfg.campaignType || !cfg.orgName) {
+      if (isAdmin()) go('campaignSetup');
+      else go('awaitingSetup');
+    }
+    else go('voterSetup');
+  } catch (err) {
+    console.error('enterApp failed:', err);
+    renderFatalError(err, 'enterApp');
+  }
+}
+
+// Returns true once the basics and the required script sections
+// (Reach, Intro, Commit, Wrap) are in place. Used to warn before exit.
+function isSetupComplete() {
+  if (!cfg.orgName || !cfg.campaignType || !cfg.ctaDate) return false;
+  if (!cfg.rawScript || !cfg.rawScript.trim()) return false;
+  if (!hasSlot('reach') || !hasSlot('intro') || !hasSlot('commit') || !hasSlot('wrap')) return false;
+  const t = cfg.campaignType;
+  if (t === 'fundraising') {
+    if (!cfg.donationUrl) return false;
+  }
+  return true;
+}
+
+async function signOut() {
+  if (!isSetupComplete() && !confirm('Campaign setup is not finished yet. If you sign out now, volunteers will not be able to start conversations until setup is completed.\n\nSign out anyway?')) {
+    return;
+  }
+  await clearAuth();
+  if (window.google) google.accounts.id.disableAutoSelect();
+  location.reload();
+}
+
+window.addEventListener('beforeunload', (e) => {
+  if (auth.approved && !isSetupComplete()) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+
+
+/* ============================================================
+   CAMPAIGN CONFIG
+   ─────────────────────────────────────────────────────────────
+   All campaign-specific values. Set by the organizer once.
+   The fill() function interpolates these into script templates.
+
+   CAMPAIGN TYPES:
+   primary     - Primary election
+   general     - General election
+   ballot      - Ballot measure campaign
+   advocacy    - Issue advocacy organization
+   nonprofit   - Nonprofit volunteer recruitment
+   fundraising - Fundraising canvass
+   ============================================================ */
+
+const CAMPAIGN_TYPE_LABELS = {
+  primary:     'Primary Election',
+  general:     'General Election',
+  ballot:      'Ballot Measure',
+  advocacy:    'Issue Advocacy',
+  nonprofit:   'Nonprofit / Volunteer Recruit',
+  fundraising: 'Fundraising Canvass',
+};
+
+// Fields shown in setup by campaign type.
+// 'universal' = always shown. Other keys = only for that type.
+const FIELD_GROUPS = {
+  universal:   ['orgName', 'campaignType', 'ctaDate', 'earlyAction'],
+  primary:     ['candidate', 'opponents', 'office', 'district', 'county'],
+  general:     ['candidate', 'opponents', 'office', 'district', 'county'],
+  ballot:      ['measureName', 'measurePosition', 'measurePlainEnglish'],
+  advocacy:    ['issueName', 'actionAsk'],
+  nonprofit:   ['programName', 'actionAsk'],
+  fundraising: ['askAmount', 'askAmountLow', 'fundPurpose', 'donationUrl', 'donationPhone', 'acceptsCard', 'acceptsCheck', 'acceptsCash', 'taxDeductible', 'receiptPromise'],
+};
+
+// The live campaign config object.
+// Loaded from storage on boot; saved when organizer taps Save.
+const cfg = {
+  // Universal
+  orgName:         '',
+  campaignType:    '',
+  ctaDate:         '',
+  ctaDateLabel:    '',
+  ctaDateValue:    '', // ISO date string from the date picker
+  earlyAction:     '',
+  earlyActionLabel: '',
+  earlyActionDates: [], // array of ISO date strings
+  // Election types
+  candidate:       '',
+  opponents:       [], // array of opponent names (multi-entry)
+  office:          '', // office title only, e.g. "State Representative"
+  district:        '', // e.g. "District 80"
+  county:          '', // optional, only shown/used when relevant
+  // Ballot measure
+  measureName:          '',
+  measurePosition:      '',
+  measurePlainEnglish:  '',
+  // Advocacy / nonprofit
+  issueName:   '',
+  actionAsk:   '',
+  programName: '',
+  // Fundraising
+  askAmount:      '',
+  askAmountLow:   '',
+  fundPurpose:    '',
+  donationUrl:    '',
+  donationPhone:  '',
+  acceptsCard:    false,
+  acceptsCheck:   false,
+  acceptsCash:    false,
+  taxDeductible:  false,
+  receiptPromise: '',
+  // App settings
+  canvasser: '',
+  endpoint:  '',
+  // Organizer-authored script (single pasted blob, parsed into slots)
+  rawScript: '',
+};
+
+async function loadCfg() {
+  const raw = await store.get('cfg');
+  if (raw) { try { Object.assign(cfg, JSON.parse(raw)); } catch(e) {} }
+}
+async function saveCfg() {
+  await store.set('cfg', JSON.stringify(cfg));
+}
+
+// Interpolate {variable} placeholders in a script string
+function fill(template, extras = {}) {
+  const officeDisplay = [cfg.office, cfg.district].filter(Boolean).join(', ')
+    + (cfg.county ? ` (${cfg.county})` : '');
+  const opponentsDisplay = Array.isArray(cfg.opponents) ? cfg.opponents.filter(Boolean).join(', ') : '';
+  const vars = { ...cfg, office: officeDisplay || cfg.office, opponents: opponentsDisplay, ...extras };
+  return template.replace(/\{(\w+)\}/g, (_, key) => vars[key] || `[${key}]`);
+}
+
+// Encodes the current saved cfg into a shareable URL volunteers can open.
+// Excludes the canvasser field (personal) and preserves a volunteer's
+// existing canvasser name if they already have one saved locally.
+function buildShareUrl() {
+  try {
+    if (!cfg.endpoint) return null;
+    // Encode only the endpoint URL — the full config lives server-side now.
+    // This keeps the share link short (~200 chars) regardless of script length.
+    const encoded = btoa(unescape(encodeURIComponent(cfg.endpoint)));
+    return window.location.origin + window.location.pathname + '?ep=' + encoded;
+  } catch(e) {
+    return null;
+  }
+}
+
+// Returns true if a given script slot has organizer-entered content.
+function hasSlot(slotName) {
+  const p = getParsedScript();
+  return !!(p.slots[slotName] && p.slots[slotName].trim());
+}
+
+
+/* ============================================================
+   PERSISTENCE
+   ─────────────────────────────────────────────────────────────
+   Tries window.storage (Claude), then localStorage, then memory.
+   Same pattern as original tool. Do not change.
+   ============================================================ */
+
+const _mem = {};
+function lsAvailable() { try { localStorage.setItem('__t__','1'); localStorage.removeItem('__t__'); return true; } catch(e) { return false; } }
+const HAS_LS = lsAvailable();
+
+const store = {
+  async get(k) {
+    if (window.storage) { try { const r = await window.storage.get(k, false); return r ? r.value : null; } catch(e) { return null; } }
+    if (HAS_LS)         { try { return localStorage.getItem('canvass:' + k); } catch(e) {} }
+    return (_mem[k] !== undefined) ? _mem[k] : null;
+  },
+  async set(k, v) {
+    if (window.storage) { try { await window.storage.set(k, v, false); } catch(e) {} return; }
+    if (HAS_LS)         { try { localStorage.setItem('canvass:' + k, v); return; } catch(e) {} }
+    _mem[k] = v;
+  },
+};
+
+
+/* ============================================================
+   SESSION LOG
+   ============================================================ */
+
+let log = [];
+
+async function loadLog() {
+  const raw = await store.get('log');
+  if (raw) { try { log = JSON.parse(raw) || []; } catch(e) {} }
+  updateLogCount();
+}
+async function persistLog() {
+  await store.set('log', JSON.stringify(log));
+  updateLogCount();
+}
+function updateLogCount() {
+  document.getElementById('logCount').textContent = log.length;
+}
+
+
+/* ============================================================
+   CONTACT STATE
+   ─────────────────────────────────────────────────────────────
+   One contact's data for the current conversation.
+   Reset to blankContact() after every log.
+   ============================================================ */
+
+let mode = 'phone'; // 'phone' | 'door'
+
+function blankContact() {
+  return {
+    name: '', contactId: '', step: 'voterSetup', history: [],
+    concern: null, support: null,
+    willVote: null, committed: null,
+    voteMethod: '', yardSign: '', volunteer: '',
+    donationAmount: '', donationMethod: '',
+    disposition: null, resultCode: null,
+  };
+}
+
+let C = blankContact(); // active contact
+
+// Standardized result codes, consistent regardless of campaign type
+const RESULT_CODE = {
+  done:        'Canvassed',
+  gracious:    'Canvassed',
+  voicemail:   'Left Message',
+  nothome:     'Not Home',
+  unavailable: 'Not Home',
+  busy:        'Callback',
+  refused:     'Refused',
+  moved:       'Moved',
+  wrongnum:    'Wrong Number/Address',
+  deceased:    'Deceased',
+  declined:    'Declined',
+};
+
+const SUPPORT_CLASS = { 1: 'sb1', 2: 'sb2', 3: 'sb3', 4: 'sb4', 5: 'sb5' };
+
+
+/* ============================================================
+   RENDER HELPERS
+   ─────────────────────────────────────────────────────────────
+   Pure layout utilities. No script content in here.
+   ============================================================ */
+
+function el(html) {
+  const d = document.createElement('div');
+  d.innerHTML = html.trim();
+  return d.firstChild;
+}
+
+function render(node) {
+  const m = document.getElementById('main');
+  m.innerHTML = '';
+  m.appendChild(node);
+  m.scrollTop = 0;
+  window.scrollTo(0, 0);
+}
+
+// Progress rail - pass how many steps are complete (0-7)
+function rail(done) {
+  const total = 7;
+  return `<div class="rail" aria-hidden="true">${
+    Array.from({ length: total }, (_, i) =>
+      `<i class="${i < done ? 'done' : i === done ? 'on' : ''}"></i>`
+    ).join('')
+  }</div>`;
+}
+
+// Build a choice button list and wire up click handlers
+function choiceList(items) {
+  return items.map((c, i) =>
+    `<button class="choice ${c.cls || ''}" data-i="${i}">
+       <span class="ic">${c.ic || ''}</span>
+       <span>${c.label}</span>
+     </button>`
+  ).join('');
+}
+function wireChoices(node, items) {
+  node.querySelectorAll('.choice').forEach(b => b.onclick = () => items[+b.dataset.i].fn());
+}
+
+// Steps that aren't part of an in-progress contact — back navigation
+// doesn't track these as history entries.
+const NON_CONTACT_STEPS = ['voterSetup', 'campaignSetup', 'awaitingSetup'];
+
+function backButtonHtml() {
+  return (C.history && C.history.length)
+    ? `<button class="miniBtn" id="backBtn" type="button" style="margin-bottom:10px">‹ Back</button>`
+    : '';
+}
+function wireBack(node) {
+  const b = node.querySelector('#backBtn');
+  if (b) b.onclick = () => goBack();
+}
+function goBack() {
+  if (!C.history || !C.history.length) { go('voterSetup'); return; }
+  const prev = C.history.pop();
+  go(prev, { fromBack: true });
+}
+
+// Listen → Case → Support are optional script sections. Given the step
+// just finished, find the next one in sequence that actually has
+// organizer content, skipping any that are blank. Falls through to
+// 'commit' (always required) if none of the optional steps are filled.
+const OPTIONAL_STEP_ORDER = ['listen', 'case', 'support'];
+function goToNextOptionalStep(afterStep) {
+  const startIdx = OPTIONAL_STEP_ORDER.indexOf(afterStep) + 1;
+  for (let i = startIdx; i < OPTIONAL_STEP_ORDER.length; i++) {
+    const step = OPTIONAL_STEP_ORDER[i];
+    if (hasSlot(step)) { go(step); return; }
+  }
+  go('commit');
+}
+
+// Standard screen: rail + back + eyebrow + script card + extra HTML + choice buttons
+function screen(railPos, eyebrow, sayHTML, choices, extra = '') {
+  const node = el(`<div>
+    ${rail(railPos)}
+    ${backButtonHtml()}
+    <div class="eyebrow">${eyebrow}</div>
+    <div class="say" style="margin-top:8px">${sayHTML}</div>
+    ${extra}
+    <div class="choices">${choiceList(choices)}</div>
+  </div>`);
+  wireChoices(node, choices);
+  render(node);
+  updateWhoBar();
+  wireBack(node);
+}
+
+function escHtml(s) {
+  return (s || '').replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+}
+
+function updateWhoBar() {
+  document.getElementById('whoBar').innerHTML = C.name
+    ? `<b>${escHtml(C.name)}</b> · ${mode === 'phone' ? 'Phone' : 'Door'}`
+    : 'No contact started';
+  // Update top bar
+  const type = cfg.campaignType;
+  document.getElementById('topOrg').textContent  = cfg.orgName || 'Canvassing Tool';
+  document.getElementById('topSub').textContent  = cfg.ctaDate ? `${cfg.ctaDate}` : 'Set up your campaign';
+  const badge = document.getElementById('typeBadge');
+  if (type && CAMPAIGN_TYPE_LABELS[type]) {
+    badge.textContent = CAMPAIGN_TYPE_LABELS[type];
+    badge.hidden = false;
+  } else {
+    badge.hidden = true;
+  }
+}
+
+
+/* ============================================================
+   SCREENS
+   ─────────────────────────────────────────────────────────────
+   Each screen is a function that builds and renders a node.
+   go(stepName) is the only navigation primitive.
+   ============================================================ */
+
+function go(step, opts = {}) {
+  if (!opts.fromBack && C.step && C.step !== step && !NON_CONTACT_STEPS.includes(C.step)) {
+    C.history.push(C.step);
+  }
+  C.step = step;
+  try {
+    SCREENS[step]();
+  } catch (err) {
+    console.error('Render error in screen:', step, err);
+    renderFatalError(err, step);
+  }
+}
+
+function renderFatalError(err, step) {
+  const m = document.getElementById('main');
+  m.innerHTML = `
+    <div style="background:#FCEAEA; border:1px solid #CF3C3C; border-radius:14px; padding:18px; color:#7A2222;">
+      <div style="font-weight:800; font-size:15px; margin-bottom:8px">Something went wrong loading this screen</div>
+      <div style="font-size:13.5px; line-height:1.5; margin-bottom:10px">
+        Screen: <code>${step}</code><br>
+        Error: <code>${(err && err.message) || String(err)}</code>
+      </div>
+      <div style="font-size:12.5px; color:#9A4B4B">
+        Open your browser's console (F12 → Console tab) for the full error, or share this message so it can be fixed.
+      </div>
+    </div>`;
+}
+
+
+const SCREENS = {
+
+  /* ── Shown to non-admin volunteers when no campaign is configured yet ── */
+  awaitingSetup() {
+    const node = el(`<div class="setup">
+      <div class="eyebrow">Almost there</div>
+      <p class="lead">Your campaign organizer hasn't finished setting up this tool yet. Campaign Setup is restricted to leadership accounts.</p>
+      <div class="warning-box">
+        <b>Nothing to do here yet.</b> Check back once your organizer has saved the campaign details, or reach out to them directly.
+      </div>
+      <div class="choices" style="margin-top:18px">
+        <button class="choice" id="signOutBtn2"><span class="ic">↪</span><span>Sign out</span></button>
+      </div>
+    </div>`);
+    render(node);
+    updateWhoBar();
+    node.querySelector('#signOutBtn2').onclick = () => signOut();
+  },
+
+  /* ── Campaign setup (organizer fills this once) ─────────── */
+  campaignSetup() {
+    if (!isAdmin()) { go('voterSetup'); return; }
+    const t = cfg.campaignType;
+    const isElection    = ['primary','general'].includes(t);
+    const isBallot      = t === 'ballot';
+    const isAdvocacy    = t === 'advocacy';
+    const isNonprofit   = t === 'nonprofit';
+    const isFundraising = t === 'fundraising';
+    const isAppsScript  = !!(window.google && window.google.script && window.google.script.run);
+    const show = (cond) => cond ? '' : 'display:none';
+
+    const node = el(`<div class="setup">
+      <div class="eyebrow">Campaign setup</div>
+      <p class="lead">Fill this in once before your first shift. Volunteers see the result, they don't edit this screen.</p>
+
+      <!-- ── Universal fields ── -->
+      <div class="field">
+        <label for="cs-type">Campaign type</label>
+        <select id="cs-type">
+          <option value="">Select type</option>
+          ${Object.entries(CAMPAIGN_TYPE_LABELS).map(([v,l]) =>
+            `<option value="${v}" ${t===v?'selected':''}>${l}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label for="cs-org">Organization / campaign name</label>
+        <input id="cs-org" placeholder="e.g. Organization Name" value="${escHtml(cfg.orgName)}">
+      </div>
+      <div class="field">
+        <label for="cs-date-label-select">Key date — title</label>
+        <select id="cs-date-label-select">
+          <option value="Election Day">Election Day</option>
+          <option value="Primary Election">Primary Election</option>
+          <option value="Voting Deadline">Voting Deadline</option>
+          <option value="Registration Deadline">Registration Deadline</option>
+          <option value="Event Date">Event Date</option>
+          <option value="Application Deadline">Application Deadline</option>
+          <option value="__custom__">Custom title…</option>
+        </select>
+        <input id="cs-date-label-custom" placeholder="Type your own title" style="margin-top:6px;display:none">
+        <label for="cs-date-picker" style="margin-top:10px;display:block">Key date — calendar date (optional)</label>
+        <input id="cs-date-picker" type="date" value="${escHtml(cfg.ctaDateValue)}" aria-label="Pick the calendar date for the key date">
+        <div class="section-sub" id="cs-date-preview" style="margin-top:4px"></div>
+      </div>
+      <div class="field">
+        <label for="cs-early-label-select">Early voting / alternate action — title <span style="text-transform:none;font-weight:600;color:var(--faint)">(optional)</span></label>
+        <select id="cs-early-label-select">
+          <option value="">None / not applicable</option>
+          <option value="Early Voting">Early Voting</option>
+          <option value="Absentee Voting">Absentee Voting</option>
+          <option value="Mail Ballot Deadline">Mail Ballot Deadline</option>
+          <option value="Drop Box Hours">Drop Box Hours</option>
+          <option value="Volunteer Training">Volunteer Training</option>
+          <option value="__custom__">Custom title…</option>
+        </select>
+        <input id="cs-early-label-custom" placeholder="Type your own title" style="margin-top:6px;display:none">
+        <label for="cs-early-picker" style="margin-top:10px;display:block">Add a date (optional, can add more than one)</label>
+        <input id="cs-early-picker" type="date" aria-label="Pick a date to add to early voting">
+        <div class="seg" id="cs-early-dates" style="margin-top:8px;flex-wrap:wrap"></div>
+        <div class="section-sub" id="cs-early-preview" style="margin-top:4px"></div>
+      </div>
+
+
+      <!-- ── Election-specific ── -->
+      <div id="g-election" style="${show(isElection)}">
+        <div class="section"><div class="section-head">Candidate details</div></div>
+        <div class="field"><label for="cs-cand">Candidate full name</label>
+          <input id="cs-cand" placeholder="e.g. Candidate Name" value="${escHtml(cfg.candidate)}"></div>
+        <div class="field">
+          <label>Opponent(s)</label>
+          <div id="opponentsList"></div>
+          <div class="choices" style="margin-top:8px">
+            <button class="choice soft" type="button" id="addOpponentBtn" style="min-height:44px"><span class="ic">+</span><span>Add opponent</span></button>
+          </div>
+        </div>
+        <div class="field"><label for="cs-office">Office title</label>
+          <input id="cs-office" placeholder="e.g. Office Title" value="${escHtml(cfg.office)}"></div>
+        <div class="field"><label for="cs-district">District</label>
+          <input id="cs-district" placeholder="e.g. District Name/Number" value="${escHtml(cfg.district)}"></div>
+        <div class="field">
+          <label for="cs-county">County <span style="text-transform:none;font-weight:600;color:var(--faint)">(optional)</span></label>
+          <input id="cs-county" placeholder="e.g. County Name" value="${escHtml(cfg.county)}">
+        </div>
+      </div>
+
+      <!-- ── Ballot measure ── -->
+      <div id="g-ballot" style="${show(isBallot)}">
+        <div class="section"><div class="section-head">Ballot measure details</div></div>
+        <div class="field"><label for="cs-mname">Measure name / number</label>
+          <input id="cs-mname" placeholder="e.g. Measure Name" value="${escHtml(cfg.measureName)}"></div>
+        <div class="field"><label for="cs-mpos">Our position</label>
+          <select id="cs-mpos">
+            <option value="">Select</option>
+            <option value="Yes"  ${cfg.measurePosition==='Yes' ?'selected':''}>Vote YES</option>
+            <option value="No"   ${cfg.measurePosition==='No'  ?'selected':''}>Vote NO</option>
+          </select></div>
+        <div class="field"><label for="cs-mplain">Plain-English summary (one sentence)</label>
+          <input id="cs-mplain" placeholder="e.g. A one-sentence summary of what this measure does" value="${escHtml(cfg.measurePlainEnglish)}"></div>
+      </div>
+
+      <!-- ── Advocacy ── -->
+      <div id="g-advocacy" style="${show(isAdvocacy)}">
+        <div class="section"><div class="section-head">Issue details</div></div>
+        <div class="field"><label for="cs-issue">Issue name</label>
+          <input id="cs-issue" placeholder="e.g. Issue Name" value="${escHtml(cfg.issueName)}"></div>
+        <div class="field"><label for="cs-action">The ask (what you want people to do)</label>
+          <input id="cs-action" placeholder="e.g. Contact your representative" value="${escHtml(cfg.actionAsk)}"></div>
+      </div>
+
+      <!-- ── Nonprofit ── -->
+      <div id="g-nonprofit" style="${show(isNonprofit)}">
+        <div class="section"><div class="section-head">Program details</div></div>
+        <div class="field"><label for="cs-prog">Program name</label>
+          <input id="cs-prog" placeholder="e.g. Program Name" value="${escHtml(cfg.programName)}"></div>
+        <div class="field"><label for="cs-vol">Volunteer ask</label>
+          <input id="cs-vol" placeholder="e.g. Describe the volunteer commitment" value="${escHtml(cfg.actionAsk)}"></div>
+      </div>
+
+      <!-- ── Fundraising ── -->
+      <div id="g-fundraising" style="${show(isFundraising)}">
+        <div class="section"><div class="section-head">Fundraising details</div></div>
+        <div class="field"><label for="cs-ask">Primary ask amount</label>
+          <input id="cs-ask" placeholder="e.g. $0" value="${escHtml(cfg.askAmount)}"></div>
+        <div class="field"><label for="cs-asklow">Fallback ask amount</label>
+          <input id="cs-asklow" placeholder="e.g. $0" value="${escHtml(cfg.askAmountLow)}"></div>
+        <div class="field"><label for="cs-fund">What the money funds (short phrase)</label>
+          <input id="cs-fund" placeholder="e.g. What this funding supports" value="${escHtml(cfg.fundPurpose)}"></div>
+        <div class="field"><label for="cs-durl">Donation URL</label>
+          <input id="cs-durl" placeholder="e.g. yourdomain.org/donate" value="${escHtml(cfg.donationUrl)}" inputmode="url"></div>
+        <div class="field"><label for="cs-dphone">Donation phone (optional)</label>
+          <input id="cs-dphone" placeholder="e.g. 000-000-0000" value="${escHtml(cfg.donationPhone)}" inputmode="tel"></div>
+        <div class="field"><label for="cs-receipt">Receipt promise (optional)</label>
+          <input id="cs-receipt" placeholder="e.g. Confirmation details for donors" value="${escHtml(cfg.receiptPromise)}"></div>
+
+        <div class="section">
+          <div class="section-head">Payment methods accepted</div>
+          <div class="section-sub">Enable only what your org is set up to receive</div>
+        </div>
+        <div class="toggle-row">
+          <span class="toggle-label">Credit / debit card</span>
+          <div class="seg" data-bool="acceptsCard">
+            <button data-v="true"  aria-pressed="${cfg.acceptsCard  ? 'true':'false'}">Yes</button>
+            <button data-v="false" aria-pressed="${!cfg.acceptsCard ? 'true':'false'}">No</button>
+          </div>
+        </div>
+        <div class="toggle-row">
+          <span class="toggle-label">Check</span>
+          <div class="seg" data-bool="acceptsCheck">
+            <button data-v="true"  aria-pressed="${cfg.acceptsCheck  ? 'true':'false'}">Yes</button>
+            <button data-v="false" aria-pressed="${!cfg.acceptsCheck ? 'true':'false'}">No</button>
+          </div>
+        </div>
+        <div class="toggle-row">
+          <span class="toggle-label">Cash <em style="font-weight:600;font-style:normal;font-size:12px;color:var(--amber)">(door only)</em></span>
+          <div class="seg" data-bool="acceptsCash">
+            <button data-v="true"  aria-pressed="${cfg.acceptsCash  ? 'true':'false'}">Yes</button>
+            <button data-v="false" aria-pressed="${!cfg.acceptsCash ? 'true':'false'}">No</button>
+          </div>
+        </div>
+        <div class="toggle-row">
+          <span class="toggle-label">Tax-deductible?
+            <span class="toggle-sub">If No, volunteers will not mention taxes</span>
+          </span>
+          <div class="seg" data-bool="taxDeductible">
+            <button data-v="true"  aria-pressed="${cfg.taxDeductible  ? 'true':'false'}">Yes</button>
+            <button data-v="false" aria-pressed="${!cfg.taxDeductible ? 'true':'false'}">No</button>
+          </div>
+        </div>
+        <div class="warning-box">
+          <b>Cash collection rules vary.</b> Political campaigns have contribution limits and reporting requirements that differ by state. Confirm your local rules before enabling cash.
+        </div>
+      </div>
+
+      <!-- ── Volunteer script ── -->
+      <div class="section">
+        <div class="section-head">Your script</div>
+        <div class="section-sub">
+          Paste your own script below. Mark each part with a header line like
+          <code>##REACH</code>, <code>##INTRO</code>, <code>##LISTEN</code>,
+          <code>##CASE</code>, <code>##SUPPORT</code>, <code>##COMMIT</code>,
+          <code>##WRAP</code>, and <code>##OBJECTIONS</code> (use <code>Q:</code> / <code>A:</code>
+          lines inside Objections). You can reuse any of your variables above,
+          e.g. <code>{candidate}</code>, <code>{ctaDate}</code>, <code>{orgName}</code>.
+          <b>Reach, Intro, Commit, and Wrap are required</b> before you can save.
+          Listen, Case, and Support are optional — if left blank, that step is
+          skipped entirely for volunteers.
+        </div>
+      </div>
+      <div class="field">
+        <label for="cs-script">Paste your script</label>
+        <textarea id="cs-script" rows="14" placeholder="## REACH&#10;Your opening line when someone answers.&#10;&#10;## INTRO&#10;Who you are and why you're reaching out.&#10;&#10;## LISTEN&#10;What you ask to hear their concerns. (optional)&#10;&#10;## CASE&#10;The case you make for your candidate or cause. (optional)&#10;&#10;## SUPPORT&#10;How you ask where they stand. (optional)&#10;&#10;## COMMIT&#10;The specific ask you make.&#10;&#10;## WRAP&#10;How you close the conversation.&#10;&#10;## OBJECTIONS&#10;Q: A common objection you hear.&#10;A: How you respond to it.">${escHtml(cfg.rawScript)}</textarea>
+      </div>
+      <div class="warning-box" id="scriptValidationMsg" hidden></div>
+      <details class="cfg" open>
+        <summary>👁 Live preview — how this gets sliced</summary>
+        <div class="body" id="scriptPreviewBody"></div>
+      </details>
+
+      <!-- ── App settings ── -->
+      ${!isAppsScript ? `
+      <div class="section">
+        <div class="section-head">App settings</div>
+      </div>
+      <div class="field"><label for="cs-ep">Google Sheets submit link</label>
+        <input id="cs-ep" placeholder="Paste your Apps Script /exec URL" value="${escHtml(cfg.endpoint)}" inputmode="url"></div>
+      ` : ``}
+
+      <div class="choices" style="margin-top:18px">
+        <button class="choice go" id="saveCampaignBtn"><span class="ic">✓</span><span>Save campaign</span></button>
+        <button class="choice" id="previewBtn"><span class="ic">👁</span><span>Preview script</span></button>
+      </div>
+
+      <!-- ── Share with volunteers ── -->
+      <div class="section" id="shareSection">
+        <div class="section-head">Share with volunteers</div>
+        <div class="section-sub">Send this link to every volunteer. When they open it, the campaign script and settings load automatically — no tech setup on their end.</div>
+      </div>
+      <div id="shareLinkDisplay" hidden style="word-break:break-all;font-size:12.5px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px;color:var(--ink-soft);line-height:1.6;margin-top:4px"></div>
+      <div class="choices" style="margin-top:10px">
+        <button class="choice" id="genShareBtn"><span class="ic">🔗</span><span>Generate share link</span></button>
+        <button class="choice" id="copyShareBtn" hidden><span class="ic">📋</span><span id="copyShareLabel">Copy link</span></button>
+      </div>
+    </div>`);
+
+    render(node);
+    updateWhoBar();
+
+    // Opponents multi-entry list
+    const opponentsListEl = node.querySelector('#opponentsList');
+    function renderOpponentRows(values) {
+      opponentsListEl.innerHTML = '';
+      const list = values.length ? values : [''];
+      list.forEach((val, i) => {
+        const row = el(`<div style="display:flex; gap:8px; margin-top:${i === 0 ? '6px' : '8px'}">
+          <input class="opp-input" value="${escHtml(val)}" placeholder="e.g. John Smith" style="flex:1; border:1.5px solid var(--line); border-radius:12px; padding:13px; font:inherit; font-size:17px; background:var(--surface)">
+          <button type="button" class="miniBtn danger" style="flex:none">Remove</button>
+        </div>`);
+        row.querySelector('button').onclick = () => {
+          const rows = Array.from(opponentsListEl.children);
+          if (rows.length <= 1) { row.querySelector('.opp-input').value = ''; return; }
+          row.remove();
+        };
+        opponentsListEl.appendChild(row);
+      });
+    }
+    renderOpponentRows(Array.isArray(cfg.opponents) ? cfg.opponents : []);
+    node.querySelector('#addOpponentBtn').onclick = () => {
+      const row = el(`<div style="display:flex; gap:8px; margin-top:8px">
+        <input class="opp-input" value="" placeholder="e.g. John Smith" style="flex:1; border:1.5px solid var(--line); border-radius:12px; padding:13px; font:inherit; font-size:17px; background:var(--surface)">
+        <button type="button" class="miniBtn danger" style="flex:none">Remove</button>
+      </div>`);
+      row.querySelector('button').onclick = () => {
+        const rows = Array.from(opponentsListEl.children);
+        if (rows.length <= 1) { row.querySelector('.opp-input').value = ''; return; }
+        row.remove();
+      };
+      opponentsListEl.appendChild(row);
+    };
+
+    // Key date: editable "title" dropdown + an independent calendar date.
+    // Picking a date never overwrites the title field — the two combine
+    // into a single preview line, and that combined string is what gets
+    // saved as cfg.ctaDate.
+    function formatIsoDate(iso) {
+      if (!iso) return '';
+      const [y, m, d] = iso.split('-').map(Number);
+      return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+    }
+    function composeDateText(label, iso) {
+      const dateText = formatIsoDate(iso);
+      return [label.trim(), dateText].filter(Boolean).join(', ');
+    }
+
+    // Wires a <select> + "Custom…" fallback <input> pair so the dropdown
+    // is always clickable (a typed value never hides it, unlike a native
+    // datalist combobox). Pre-selects "Custom…" and shows the text input
+    // if the saved value doesn't match one of the preset options.
+    function wireLabelSelect(selectEl, customEl, savedValue) {
+      const presetValues = Array.from(selectEl.options).map(o => o.value).filter(v => v !== '__custom__');
+      if (savedValue && !presetValues.includes(savedValue)) {
+        selectEl.value = '__custom__';
+        customEl.value = savedValue;
+        customEl.style.display = '';
+      } else if (savedValue) {
+        selectEl.value = savedValue;
+      }
+      function sync() {
+        const isCustom = selectEl.value === '__custom__';
+        customEl.style.display = isCustom ? '' : 'none';
+        if (!isCustom) customEl.value = '';
+      }
+      selectEl.addEventListener('change', sync);
+      sync();
+      return () => selectEl.value === '__custom__' ? customEl.value.trim() : selectEl.value;
+    }
+
+    const dateLabelSelect = node.querySelector('#cs-date-label-select');
+    const dateLabelCustom = node.querySelector('#cs-date-label-custom');
+    const getDateLabel = wireLabelSelect(dateLabelSelect, dateLabelCustom, cfg.ctaDateLabel || cfg.ctaDate);
+
+    const datePickerInput = node.querySelector('#cs-date-picker');
+    const datePreviewEl   = node.querySelector('#cs-date-preview');
+    function updateDatePreview() {
+      const combined = composeDateText(getDateLabel(), datePickerInput.value);
+      datePreviewEl.textContent = combined ? `Will be saved as: "${combined}"` : '';
+    }
+    dateLabelSelect.addEventListener('change', updateDatePreview);
+    dateLabelCustom.addEventListener('input', updateDatePreview);
+    datePickerInput.addEventListener('change', updateDatePreview);
+    updateDatePreview();
+
+    // Early voting: editable "title" dropdown + any number of added dates,
+    // shown as removable tags. Combines into a single saved string the
+    // same way as the key date field above.
+    let earlyDates = Array.isArray(cfg.earlyActionDates) ? [...cfg.earlyActionDates] : [];
+    const earlyLabelSelect = node.querySelector('#cs-early-label-select');
+    const earlyLabelCustom = node.querySelector('#cs-early-label-custom');
+    const getEarlyLabel = wireLabelSelect(earlyLabelSelect, earlyLabelCustom, cfg.earlyActionLabel);
+
+    const earlyPickerInput = node.querySelector('#cs-early-picker');
+    const earlyDatesEl     = node.querySelector('#cs-early-dates');
+    const earlyPreviewEl   = node.querySelector('#cs-early-preview');
+    function renderEarlyDates() {
+      earlyDatesEl.innerHTML = earlyDates.map((iso, i) =>
+        `<button type="button" data-i="${i}" style="display:flex;align-items:center;gap:6px">${formatIsoDate(iso)} ✕</button>`
+      ).join('');
+      earlyDatesEl.querySelectorAll('button').forEach(b => {
+        b.onclick = () => { earlyDates.splice(+b.dataset.i, 1); renderEarlyDates(); updateEarlyPreview(); };
+      });
+    }
+    function updateEarlyPreview() {
+      const dateText = earlyDates.map(formatIsoDate).join(' & ');
+      const combined = [getEarlyLabel(), dateText].filter(Boolean).join(', ');
+      earlyPreviewEl.textContent = combined ? `Will be saved as: "${combined}"` : '';
+    }
+    earlyPickerInput.addEventListener('change', function() {
+      if (!this.value) return;
+      if (!earlyDates.includes(this.value)) earlyDates.push(this.value);
+      this.value = '';
+      renderEarlyDates();
+      updateEarlyPreview();
+    });
+    earlyLabelSelect.addEventListener('change', updateEarlyPreview);
+    earlyLabelCustom.addEventListener('input', updateEarlyPreview);
+    renderEarlyDates();
+    updateEarlyPreview();
+
+    // Re-show/hide type-specific groups when type changes
+    node.querySelector('#cs-type').onchange = function() {
+      const v = this.value;
+      node.querySelector('#g-election').style.display   = ['primary','general'].includes(v) ? '' : 'none';
+      node.querySelector('#g-ballot').style.display     = v === 'ballot'      ? '' : 'none';
+      node.querySelector('#g-advocacy').style.display   = v === 'advocacy'    ? '' : 'none';
+      node.querySelector('#g-nonprofit').style.display  = v === 'nonprofit'   ? '' : 'none';
+      node.querySelector('#g-fundraising').style.display= v === 'fundraising' ? '' : 'none';
+    };
+
+    // Boolean toggle segments
+    node.querySelectorAll('.seg[data-bool]').forEach(seg => {
+      const field = seg.dataset.bool;
+      seg.querySelectorAll('button').forEach(b => {
+        b.onclick = () => {
+          const val = b.dataset.v === 'true';
+          cfg[field] = val;
+          seg.querySelectorAll('button').forEach(x =>
+            x.setAttribute('aria-pressed', (x.dataset.v === 'true') === val ? 'true' : 'false')
+          );
+        };
+      });
+    });
+
+    const REQUIRED_SLOTS = ['reach', 'intro', 'commit', 'wrap'];
+    const REQUIRED_SLOT_LABELS = { reach: 'Reach', intro: 'Intro', commit: 'Commit', wrap: 'Wrap' };
+
+    node.querySelector('#saveCampaignBtn').onclick = async () => {
+      const scriptValue = node.querySelector('#cs-script').value;
+      const parsedCheck = parseOrganizerScript(scriptValue);
+      const missing = REQUIRED_SLOTS.filter(slot => !parsedCheck.slots[slot] || !parsedCheck.slots[slot].trim());
+      const msgEl = node.querySelector('#scriptValidationMsg');
+      if (missing.length) {
+        msgEl.hidden = false;
+        msgEl.innerHTML = `<b>Missing required script sections.</b> Reach, Intro, Commit, and Wrap must all have content before you can save. Missing: ${missing.map(s => REQUIRED_SLOT_LABELS[s]).join(', ')}.`;
+        msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      msgEl.hidden = true;
+
+      cfg.orgName           = node.querySelector('#cs-org').value.trim();
+      cfg.campaignType      = node.querySelector('#cs-type').value;
+      cfg.ctaDateLabel      = getDateLabel();
+      cfg.ctaDateValue      = datePickerInput.value;
+      cfg.ctaDate           = composeDateText(cfg.ctaDateLabel, cfg.ctaDateValue);
+      cfg.earlyActionLabel  = getEarlyLabel();
+      cfg.earlyActionDates  = earlyDates;
+      cfg.earlyAction       = [cfg.earlyActionLabel, earlyDates.map(formatIsoDate).join(' & ')].filter(Boolean).join(', ');
+      if (!isAppsScript) cfg.endpoint = node.querySelector('#cs-ep')?.value.trim() || cfg.endpoint;
+      cfg.rawScript         = scriptValue;
+
+      // Type-specific
+      if (['primary','general'].includes(cfg.campaignType)) {
+        cfg.candidate = node.querySelector('#cs-cand')?.value.trim() || '';
+        cfg.opponents = Array.from(node.querySelectorAll('.opp-input'))
+          .map(i => i.value.trim()).filter(Boolean);
+        cfg.office    = node.querySelector('#cs-office')?.value.trim() || '';
+        cfg.district  = node.querySelector('#cs-district')?.value.trim() || '';
+        cfg.county    = node.querySelector('#cs-county')?.value.trim() || '';
+      }
+      if (cfg.campaignType === 'ballot') {
+        cfg.measureName         = node.querySelector('#cs-mname')?.value.trim() || '';
+        cfg.measurePosition     = node.querySelector('#cs-mpos')?.value || '';
+        cfg.measurePlainEnglish = node.querySelector('#cs-mplain')?.value.trim() || '';
+      }
+      if (cfg.campaignType === 'advocacy') {
+        cfg.issueName = node.querySelector('#cs-issue')?.value.trim() || '';
+        cfg.actionAsk = node.querySelector('#cs-action')?.value.trim() || '';
+      }
+      if (cfg.campaignType === 'nonprofit') {
+        cfg.programName = node.querySelector('#cs-prog')?.value.trim() || '';
+        cfg.actionAsk   = node.querySelector('#cs-vol')?.value.trim() || '';
+      }
+      if (cfg.campaignType === 'fundraising') {
+        cfg.askAmount      = node.querySelector('#cs-ask')?.value.trim() || '';
+        cfg.askAmountLow   = node.querySelector('#cs-asklow')?.value.trim() || '';
+        cfg.fundPurpose    = node.querySelector('#cs-fund')?.value.trim() || '';
+        cfg.donationUrl    = node.querySelector('#cs-durl')?.value.trim() || '';
+        cfg.donationPhone  = node.querySelector('#cs-dphone')?.value.trim() || '';
+        cfg.receiptPromise = node.querySelector('#cs-receipt')?.value.trim() || '';
+      }
+
+      await saveCfg();
+      const btn = node.querySelector('#saveCampaignBtn');
+      btn.querySelector('span:last-child').textContent = 'Saved ✓';
+      // Give a beat to see the confirmation, then move forward to start canvassing
+      setTimeout(() => { go('voterSetup'); }, 500);
+    };
+
+    node.querySelector('#previewBtn').onclick = () => openSheet('preview');
+
+    // ── Share link wiring ─────────────────────────────────
+    // Pushing config to Sheets first means the share URL only needs to
+    // encode the endpoint (~200 chars total vs thousands for the full config).
+    async function renderShareLink() {
+      if (!cfg.endpoint) {
+        alert('Add the Google Sheets submit link in App settings above before generating a share link.');
+        return;
+      }
+      const genBtn  = node.querySelector('#genShareBtn');
+      const display = node.querySelector('#shareLinkDisplay');
+      const copyBtn = node.querySelector('#copyShareBtn');
+
+      genBtn.querySelector('span:last-child').textContent = 'Saving config…';
+      genBtn.disabled = true;
+
+      try {
+        // Push the current saved config to the Sheets backend so volunteers
+        // can fetch it. Excludes the canvasser field (personal, per-device).
+        const shareConfig = { ...cfg };
+        delete shareConfig.canvasser;
+        const res = await fetch(cfg.endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'saveConfig', config: JSON.stringify(shareConfig) }),
+        });
+        const out = await res.json();
+        if (!out.ok) throw new Error(out.error || 'Server error');
+
+        const url = buildShareUrl();
+        if (!url) throw new Error('Could not build share URL');
+
+        display.textContent = url;
+        display.hidden = false;
+        copyBtn.hidden = false;
+        genBtn.querySelector('span:last-child').textContent = 'Regenerate link';
+      } catch(err) {
+        alert('Could not save config to Google Sheets: ' + err.message + '\n\nCheck your Apps Script URL in App settings and try again.');
+        genBtn.querySelector('span:last-child').textContent = 'Generate share link';
+      } finally {
+        genBtn.disabled = false;
+      }
+    }
+
+    // Show immediately if there's already a saved script (admin re-opens setup)
+    if (cfg.rawScript && cfg.orgName && cfg.endpoint) {
+      const url = buildShareUrl();
+      if (url) {
+        node.querySelector('#shareLinkDisplay').textContent = url;
+        node.querySelector('#shareLinkDisplay').hidden = false;
+        node.querySelector('#copyShareBtn').hidden = false;
+        node.querySelector('#genShareBtn').querySelector('span:last-child').textContent = 'Regenerate link';
+      }
+    }
+
+    node.querySelector('#genShareBtn').onclick = () => {
+      if (!cfg.rawScript || !cfg.orgName) {
+        alert('Save the campaign first, then generate the share link.');
+        return;
+      }
+      renderShareLink();
+    };
+
+    node.querySelector('#copyShareBtn').onclick = () => {
+      const url   = buildShareUrl();
+      const label = node.querySelector('#copyShareLabel');
+      if (!url) return;
+      navigator.clipboard.writeText(url).then(() => {
+        label.textContent = 'Copied ✓';
+        setTimeout(() => { label.textContent = 'Copy link'; }, 2000);
+      }).catch(() => {
+        // Fallback for browsers without clipboard API
+        prompt('Copy this link:', url);
+      });
+    };
+
+    // Live preview of how the pasted script gets sliced into slots
+    const scriptTextarea = node.querySelector('#cs-script');
+    const previewBody    = node.querySelector('#scriptPreviewBody');
+    const SLOT_LABELS = {
+      reach: 'Reach', intro: 'Intro', listen: 'Listen', case: 'Case',
+      support: 'Support', commit: 'Commit', wrap: 'Wrap',
+    };
+    const REQUIRED_SET = new Set(['reach', 'intro', 'commit', 'wrap']);
+    let previewDebounce = null;
+    function renderScriptPreview() {
+      const parsed = parseOrganizerScript(scriptTextarea.value);
+      let html = '';
+      SLOT_NAMES.filter(s => s !== 'objections').forEach(slot => {
+        const text = parsed.slots[slot];
+        const required = REQUIRED_SET.has(slot);
+        let statusTag;
+        if (text) statusTag = '';
+        else if (required) statusTag = ' <span style="color:var(--warn);font-weight:700">(required, missing)</span>';
+        else statusTag = ' <span style="color:var(--faint);font-weight:600">(optional, will be skipped)</span>';
+        html += `<div class="faq">
+          <h4>${SLOT_LABELS[slot]}${required ? ' <span style="font-size:11px;color:var(--faint);font-weight:700">REQUIRED</span>' : ''}${statusTag}</h4>
+          ${text ? `<p class="reply">${escHtml(text).replace(/\n/g,'<br>')}</p>` : ''}
+        </div>`;
+      });
+      html += `<div class="faq"><h4>Objections${parsed.objections.length ? '' : ' <span style="color:var(--faint);font-weight:600">(none found)</span>'}</h4>
+        ${parsed.objections.map(o => `<p class="reply"><b>${escHtml(o.prompt)}</b><br>${escHtml(o.response)}</p>`).join('')}
+      </div>`;
+      if (parsed.unplaced) {
+        html += `<div class="warning-box"><b>Unplaced text found.</b> This text appeared before any header (or under an unrecognized header) and won't show anywhere in the app:<br><br>${escHtml(parsed.unplaced).slice(0,400)}${parsed.unplaced.length>400?'…':''}</div>`;
+      }
+      previewBody.innerHTML = html;
+    }
+    renderScriptPreview();
+    scriptTextarea.addEventListener('input', () => {
+      clearTimeout(previewDebounce);
+      previewDebounce = setTimeout(renderScriptPreview, 250);
+    });
+  },
+
+
+  /* ── Voter / contact setup (start each contact here) ────── */
+  voterSetup() {
+    const ready = cfg.orgName && cfg.campaignType;
+    const node = el(`<div class="setup">
+      <div class="eyebrow">Start a conversation</div>
+      <p class="lead">Enter the contact from your list, then tap Start.</p>
+      <div class="field">
+        <label for="vs-canv">Your name (canvasser)</label>
+        <input id="vs-canv" placeholder="e.g. Jordan P." value="${escHtml(cfg.canvasser)}" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="vs-id">Contact ID (from your list)</label>
+        <input id="vs-id" placeholder="e.g. row 142 / list ID" value="${escHtml(C.contactId)}" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="vs-name">Contact name (from your list)</label>
+        <input id="vs-name" placeholder="e.g. Maria Alvarez" value="${escHtml(C.name)}" autocomplete="off">
+      </div>
+      <div class="choices" style="margin-top:18px">
+        <button class="choice go" id="startBtn"><span class="ic">▶</span><span>Start conversation</span></button>
+      </div>
+      ${ready ? '' : (isAdmin()
+        ? `<div class="warning-box"><b>Campaign not set up yet.</b> Tap "Campaign setup" below to enter your campaign details before running your first conversation.</div>`
+        : `<div class="warning-box"><b>Campaign not set up yet.</b> Your organizer needs to finish Campaign Setup before you can start a conversation.</div>`)}
+      ${isAdmin() ? `
+      <details class="cfg">
+        <summary>⚙︎ Campaign setup</summary>
+        <div class="body" style="padding-bottom:8px">
+          <div class="choices" style="margin-top:10px">
+            <button class="choice" id="goSetupBtn"><span class="ic">→</span><span>Open campaign setup</span></button>
+          </div>
+        </div>
+      </details>` : ''}
+    </div>`);
+
+    render(node);
+    updateWhoBar();
+
+    node.querySelector('#startBtn').onclick = async () => {
+      const canv = node.querySelector('#vs-canv').value.trim();
+      if (canv !== cfg.canvasser) { cfg.canvasser = canv; await saveCfg(); }
+      C.contactId = node.querySelector('#vs-id').value.trim();
+      C.name      = node.querySelector('#vs-name').value.trim();
+      go('identity');
+    };
+    const goSetupBtn = node.querySelector('#goSetupBtn');
+    if (goSetupBtn) goSetupBtn.onclick = () => go('campaignSetup');
+  },
+
+
+  /* ── Step 1: Reach ──────────────────────────────────────── */
+  identity() {
+    const name = C.name || '[contact]';
+    const fallback = mode === 'phone'
+      ? `<p>"Hi, may I speak with <em>${escHtml(name)}</em>?"</p>`
+      : `<p>"Hi there, is <em>${escHtml(name)}</em> home?"</p>`;
+
+    const sayHtml = `
+      <div class="tag">${mode === 'phone' ? 'When they pick up' : 'When the door opens'}</div>
+      ${slotHtml('reach', { contactName: escHtml(name) }, fallback)}`;
+
+    const choices = [
+      { label: `Yes, it's ${escHtml(name)}`, ic: '✓', cls: 'go',  fn: () => go('intro') },
+      mode === 'phone'
+        ? { label: 'Voicemail / no pickup', ic: '📵', fn: () => { C.disposition = 'Voicemail'; wrap('voicemail'); } }
+        : { label: 'No answer at the door', ic: '🚪', fn: () => { C.disposition = 'Not home';  wrap('nothome'); } },
+      { label: 'Someone else / not available', ic: '↪', cls: 'soft', fn: () => { C.disposition = 'Not available'; wrap('unavailable'); } },
+      { label: 'Bad record (moved / wrong / deceased)', ic: '⚑', cls: 'soft', fn: () => go('badrecord') },
+      { label: 'Refused / not interested',              ic: '✕', cls: 'soft', fn: () => { C.disposition = 'Refused'; wrap('refused'); } },
+    ];
+
+    screen(0, 'Step 1 · Reach the contact', sayHtml, choices);
+  },
+
+
+  /* ── Bad record flag ────────────────────────────────────── */
+  badrecord() {
+    const sayHtml = `
+      <div class="tag">Flag for list cleanup</div>
+      <p>Pick what's wrong, it'll be marked so the campaign can fix the file.</p>`;
+
+    const choices = [
+      { label: 'Moved away',                                              ic: '📦', fn: () => { C.disposition = 'Moved';               wrap('moved'); } },
+      { label: mode === 'phone' ? 'Wrong number' : 'Wrong address',      ic: '✕',  fn: () => { C.disposition = 'Wrong number/address'; wrap('wrongnum'); } },
+      { label: 'Deceased',                                                ic: '✝',  cls: 'soft', fn: () => { C.disposition = 'Deceased'; wrap('deceased'); } },
+    ];
+
+    screen(0, 'Step 1 · Flag a bad record', sayHtml, choices);
+  },
+
+
+  /* ── Step 2: Intro ──────────────────────────────────────── */
+  intro() {
+    const fallback = `<p>"Hi, I'm <em>[your name]</em>, a volunteer with <em>${escHtml(cfg.orgName || '[your org]')}</em>. Got a minute?"</p>`;
+
+    const sayHtml = `
+      <div class="tag">Your intro, one breath</div>
+      ${slotHtml('intro', {}, fallback)}`;
+
+    const choices = [
+      { label: 'Yes, has a minute', ic: '✓', cls: 'go', fn: () => goToNextOptionalStep('intro') },
+      { label: 'Busy / bad time',    ic: '⏱', fn: () => { C.disposition = 'Busy, callback'; wrap('busy'); } },
+    ];
+
+    screen(1, 'Step 2 · Introduce yourself', sayHtml, choices);
+  },
+
+
+  /* ── Step 3: Listen (optional — skipped if blank) ───────── */
+  listen() {
+    const fallback = `<p>"Before I go on, what's the biggest thing on your mind right now?"</p>`;
+
+    const node = el(`<div>
+      ${rail(2)}
+      ${backButtonHtml()}
+      <div class="eyebrow">Step 3 · What matters to them</div>
+      <div class="say" style="margin-top:8px">
+        <div class="tag">Ask, then listen</div>
+        ${slotHtml('listen', {}, fallback)}
+      </div>
+      <div class="field" style="margin-top:14px">
+        <label for="concern-input">What they said (optional, for your notes)</label>
+        <input id="concern-input" placeholder="e.g. their top concern" value="${escHtml(C.concern || '')}">
+      </div>
+      <div class="choices" style="margin-top:14px" id="listenChoices"></div>
+    </div>`);
+
+    const choices = [
+      { label: 'Continue', ic: '→', cls: 'go', fn: () => {
+          const input = node.querySelector('#concern-input');
+          C.concern = input ? input.value.trim() : C.concern;
+          goToNextOptionalStep('listen');
+        }
+      },
+    ];
+    node.querySelector('#listenChoices').innerHTML = choiceList(choices);
+    wireChoices(node.querySelector('#listenChoices'), choices);
+
+    render(node);
+    updateWhoBar();
+    wireBack(node);
+  },
+
+
+  /* ── Step 4: Make the case (optional — skipped if blank) ── */
+  case() {
+    const fallback = `<p>[Add your "## CASE" section in Campaign setup → Your script to fill this step in.]</p>`;
+    const sayHtml = `
+      <div class="tag">Make the case</div>
+      ${slotHtml('case', {}, fallback)}`;
+    const extraHtml = C.concern
+      ? `<div class="cue">[They named <b>${escHtml(C.concern)}</b>, tie your case to it.]</div>`
+      : '';
+
+    const choices = [
+      { label: 'Continue', ic: '→', cls: 'go', fn: () => goToNextOptionalStep('case') },
+    ];
+
+    screen(3, 'Step 4 · Make the case', sayHtml, choices, extraHtml);
+  },
+
+
+  /* ── Step 5: Support scale ──────────────────────────────── */
+  support() {
+    const fallback = `<p>"On a scale of 1 to 5, where are you right now?"</p>`;
+    const labels = { 1: 'Strong support', 2: 'Lean support', 3: 'Undecided / unsure', 4: 'Lean against', 5: 'Strong against' };
+    const sublabels = {
+      1: 'Definitely with us', 2: 'Leaning our way', 3: 'Not sure yet',
+      4: 'Leaning the other side', 5: 'Set on something else',
+    };
+
+    const node = el(`<div>
+      ${rail(4)}
+      ${backButtonHtml()}
+      <div class="eyebrow">Step 5 · Where do they stand</div>
+      <div class="say" style="margin-top:8px">
+        <div class="tag">Ask & tap their answer</div>
+        ${slotHtml('support', {}, fallback)}
+      </div>
+      <div class="scale" id="scale"></div>
+    </div>`);
+
+    const scaleEl = node.querySelector('#scale');
+    [1, 2, 3, 4, 5].forEach(n => {
+      const b = el(`<button class="sbtn ${SUPPORT_CLASS[n]}">
+        <span class="num">${n}</span>
+        <span><b>${labels[n]}</b><br><small>${sublabels[n]}</small></span>
+      </button>`);
+      b.onclick = () => {
+        C.support = n;
+        if (n <= 2) go('commit');
+        else if (n === 3) go('nudge');
+        else go('gracious');
+      };
+      scaleEl.appendChild(b);
+    });
+
+    render(node);
+    updateWhoBar();
+    wireBack(node);
+  },
+
+
+  /* Nudge (undecided, score 3) — reuses the Case text as a second pass */
+  nudge() {
+    const fallback = `<p>[Optional: nothing extra to say here. Tap "Move to commitment" to continue.]</p>`;
+    const sayHtml = `
+      <div class="tag">One more point, then ask</div>
+      ${slotHtml('case', {}, fallback)}`;
+
+    const choices = [
+      { label: 'Move to commitment', ic: '→', cls: 'go', fn: () => go('commit') },
+    ];
+
+    screen(4, 'Step 5 · Undecided, nudge', sayHtml, choices);
+  },
+
+
+  /* ── Step 6: Commitment / the ask ──────────────────────── */
+  commit() {
+    const t = cfg.campaignType;
+    const isFundraising = t === 'fundraising';
+    const fallback = `<p>[Add your "## COMMIT" section in Campaign setup → Your script to fill this step in.]</p>`;
+
+    const sayHtml = `
+      <div class="tag">${isFundraising ? 'The donation ask' : 'The ask'}</div>
+      ${slotHtml('commit', {}, fallback)}
+      ${cfg.earlyAction ? `<p style="font-size:16px;color:var(--ink-soft)">${escHtml(fill(cfg.earlyAction))}</p>` : ''}`;
+
+    let choices;
+    if (isFundraising) {
+      choices = [
+        { label: 'Yes, will donate',      ic: '✓', cls: 'go', fn: () => go('payment') },
+        { label: 'Maybe, smaller amount', ic: '~',  fn: () => {
+            C.disposition = 'Soft commit';
+            const fallbackAsk = cfg.askAmountLow ? `Even ${escHtml(cfg.askAmountLow)} makes a real difference.` : `Even a smaller amount makes a real difference.`;
+            const cNode = el(`<div class="say" style="border-left-color:var(--amber);margin-top:12px"><p>${fallbackAsk}</p></div>`);
+            document.querySelector('.say').after(cNode);
+            const choicesEl = document.querySelector('.choices');
+            choicesEl.innerHTML = choiceList([
+              { label: 'Yes, will donate', ic: '✓', cls: 'go' },
+              { label: 'Not today',         ic: '✕', cls: 'soft' },
+            ]);
+            wireChoices(choicesEl, [
+              { fn: () => go('payment') },
+              { fn: () => { C.committed = 'No'; wrap('gracious'); } },
+            ]);
+          }
+        },
+        { label: 'Not interested', ic: '✕', cls: 'soft', fn: () => { C.committed = 'No'; wrap('gracious'); } },
+      ];
+    } else {
+      // Structural outcome labels still differ by election vs general
+      // engagement (vote vs commitment), but wording above is universal.
+      const isElectionLike = ['primary','general','ballot'].includes(t);
+      const positiveLabel = isElectionLike
+        ? `Yes, will vote${cfg.ctaDate ? ' on ' + escHtml(cfg.ctaDate) : ''}`
+        : 'Yes, will take action';
+      choices = [
+        { label: positiveLabel, ic: '✓', cls: 'go', fn: () => { (isElectionLike ? C.willVote = 'Yes' : C.committed = 'Yes'); C.disposition = 'Spoke, committed'; wrap('done'); } },
+        { label: 'Not sure', ic: '~', fn: () => { (isElectionLike ? C.willVote = 'Unsure' : C.committed = 'Maybe'); C.disposition = 'Spoke'; wrap('done'); } },
+        { label: isElectionLike ? "Won't vote" : 'Not interested', ic: '✕', cls: 'soft', fn: () => {
+            if (isElectionLike) { C.willVote = 'No'; C.disposition = 'Spoke'; wrap('done'); }
+            else { C.committed = 'No'; wrap('gracious'); }
+          }
+        },
+      ];
+    }
+
+    screen(5, 'Step 6 · The ask', sayHtml, choices);
+  },
+
+
+  /* ── Payment routing (fundraising only, structural) ─────── */
+  payment() {
+    const hasCard  = cfg.acceptsCard;
+    const hasCheck = cfg.acceptsCheck;
+    const hasCash  = cfg.acceptsCash && mode === 'door';
+
+    const sayHtml = `
+      <div class="tag">Route to payment</div>
+      <p>${cfg.donationUrl ? `The easiest way is online: <em>${escHtml(cfg.donationUrl)}</em>` : 'Send them to your donation link.'}</p>
+      ${cfg.taxDeductible ? `<p style="font-size:16px;color:var(--ink-soft)">${escHtml(fill(cfg.receiptPromise || 'This is a tax-deductible contribution.'))}</p>` : ''}`;
+
+    const altSay = `
+      ${hasCard  ? `<div class="say" style="margin-top:10px;border-left-color:var(--faint)"><div class="tag" style="color:var(--faint)">IF NOT ONLINE</div><p>"We can also take a card${cfg.donationPhone ? ', call ' + escHtml(cfg.donationPhone) : ''}."</p></div>` : ''}
+      ${hasCheck ? `<div class="say" style="margin-top:10px;border-left-color:var(--faint)"><div class="tag" style="color:var(--faint)">OR BY CHECK</div><p>"A check works too, made out to ${escHtml(cfg.orgName || 'us')}."</p></div>` : ''}
+      ${hasCash  ? `<div class="say" style="margin-top:10px;border-left-color:var(--amber)"><div class="tag">CASH (DOOR ONLY)</div><p>"If cash is easier I can take it right here and give you a receipt."</p></div>` : ''}
+      <div class="say" style="margin-top:10px;border-left-color:var(--faint)">
+        <div class="tag" style="color:var(--faint)">IF THEY DIDN'T COMPLETE IT</div>
+        <p>"No problem, I'll make sure you get a reminder. Best way to reach you?"</p>
+      </div>`;
+
+    const choices = [
+      { label: 'Donated online',    ic: '💻', cls: 'go', fn: () => { C.donationMethod = 'Online';  C.committed = 'Yes'; C.disposition = 'Donated, Online';  wrap('done'); } },
+      hasCard  ? { label: 'Donated by card',   ic: '💳', fn: () => { C.donationMethod = 'Card';    C.committed = 'Yes'; C.disposition = 'Donated, Card';    wrap('done'); } } : null,
+      hasCheck ? { label: 'Donated by check',  ic: '✉', fn: () => { C.donationMethod = 'Check';   C.committed = 'Yes'; C.disposition = 'Donated, Check';   wrap('done'); } } : null,
+      hasCash  ? { label: 'Donated cash',      ic: '💵', fn: () => { C.donationMethod = 'Cash';    C.committed = 'Yes'; C.disposition = 'Donated, Cash';    wrap('done'); } } : null,
+      { label: 'Soft commit, follow up', ic: '📋', cls: 'soft', fn: () => { C.donationMethod = 'Pending'; C.committed = 'Maybe'; C.disposition = 'Soft Commit, Follow Up'; wrap('done'); } },
+      { label: 'Declined',                ic: '✕', cls: 'soft', fn: () => { C.committed = 'No'; wrap('declined'); } },
+    ].filter(Boolean);
+
+    screen(5, 'Step 6 · Payment', sayHtml, choices, altSay);
+  },
+
+
+  /* ── Gracious close (score 4–5 / not interested) ────────── */
+  gracious() {
+    const fallback = `<p>"I respect that, thanks so much for your time. Have a great day!"</p>`;
+    const sayHtml = `
+      <div class="tag">Stay warm, no pushback</div>
+      ${slotHtml('wrap', {}, fallback)}`;
+
+    const choices = [
+      { label: 'Finish & log', ic: '→', cls: 'go', fn: () => { C.disposition = 'Spoke, not our supporter'; wrap('gracious'); } },
+    ];
+
+    screen(5, 'Step 6 · Gracious close', sayHtml, choices);
+  },
+
+}; // end SCREENS
+
+
+/* ============================================================
+   WRAP - Terminal screens
+   ─────────────────────────────────────────────────────────────
+   Called by any button that ends the conversation.
+   kind maps to a result code and a closing line.
+   ============================================================ */
+
+// What volunteers say at the end of each exit path
+const WRAP_LINES = {
+  done:        () => slotHtml('wrap', {}, `<p>"That's all I've got, thank you so much, <em>${escHtml(C.name || '')}</em>. Have a great day!"</p>`),
+  gracious:    () => slotHtml('wrap', {}, `<p>"I respect that, thanks so much for your time. Have a great day!"</p>`),
+  voicemail:   () => `
+    ${slotHtml('intro', {}, `<p>"Hi, this message is for <em>${escHtml(C.name || '')}</em>. I'm <em>[your name]</em>, a volunteer with <em>${escHtml(cfg.orgName || '[your org]')}</em>."</p>`)}
+    <div class="cue">[Keep voicemail under 20 seconds. One ask, one date or link, done.]</div>`,
+  nothome:     () => `<p>[No answer: leave literature on the door, not in the mailbox. Log Not Home.]</p>`,
+  unavailable: () => slotHtml('wrap', {}, `<p>"Thanks so much, have a great day!"</p>`),
+  busy:        () => `<p>[Hand them literature or offer a callback. Do not push.]</p>`,
+  refused:     () => `<p>"Absolutely, sorry to bother you, have a great day."</p>`,
+  declined:    () => slotHtml('wrap', {}, `<p>"I respect that, thanks so much for your time. Have a great day!"</p>`),
+  moved:       () => `<p>Marked as <em>moved away</em>. No further action needed.</p>`,
+  wrongnum:    () => `<p>Marked as <em>wrong ${mode === 'phone' ? 'number' : 'address'}</em>. Campaign will fix the record.</p>`,
+  deceased:    () => `<p>Marked as <em>deceased</em>. Campaign will remove this record from the file.</p>`,
+};
+
+function wrap(kind) {
+  if (C.step !== 'wrap' && !NON_CONTACT_STEPS.includes(C.step)) {
+    C.history.push(C.step);
+  }
+  C.step       = 'wrap';
+  C.resultCode = RESULT_CODE[kind] || 'Canvassed';
+
+  const t           = cfg.campaignType;
+  const isElection  = ['primary','general'].includes(t);
+  const showExtras  = (kind === 'done');
+
+  const supportPill = C.support
+    ? `<span class="pill ${SUPPORT_CLASS[C.support]}" style="color:#fff">${C.support} · ${({1:'Strong support',2:'Lean support',3:'Undecided / unsure',4:'Lean against',5:'Strong against'})[C.support]}</span>`
+    : '<b>-</b>';
+
+  // Type-appropriate commit label
+  const commitLabel = isElection ? 'Will vote'
+    : t === 'ballot'      ? 'Will vote'
+    : t === 'fundraising' ? 'Donated'
+    : 'Committed';
+  const commitVal = C.willVote || C.committed || '-';
+
+  // Optional extras, only shown for full conversations
+  const extrasHtml = showExtras ? `
+    <div class="extras">
+      <div class="exhead">Optional, tap if it comes up</div>
+      ${isElection ? `
+      <div class="exrow"><span class="exlabel">How they'll vote</span>
+        <div class="seg" data-field="voteMethod">
+          <button data-v="Early">Early</button>
+          <button data-v="Mail">By mail</button>
+          <button data-v="Election Day">Election Day</button>
+        </div>
+      </div>
+      <div class="exrow"><span class="exlabel">Wants a yard sign?</span>
+        <div class="seg" data-field="yardSign">
+          <button data-v="Yes">Yes</button><button data-v="No">No</button>
+        </div>
+      </div>` : ''}
+      <div class="exrow"><span class="exlabel">Open to volunteering?</span>
+        <div class="seg" data-field="volunteer">
+          <button data-v="Yes">Yes</button><button data-v="No">No</button>
+        </div>
+      </div>
+      ${t === 'fundraising' ? `
+      <div class="exrow"><span class="exlabel">Donation amount (if known)</span>
+        <input id="amt-input" placeholder="e.g. $25" value="${escHtml(C.donationAmount)}"
+               style="border:1.5px solid var(--line);border-radius:8px;padding:7px 10px;font:inherit;font-size:14px;width:120px">
+      </div>` : ''}
+    </div>` : '';
+
+  const node = el(`<div>
+    ${rail(6)}
+    ${backButtonHtml()}
+    <div class="eyebrow">Wrap up</div>
+    <div class="say" style="margin-top:8px">
+      <div class="tag">Close it out</div>
+      ${(WRAP_LINES[kind] || WRAP_LINES.done)()}
+    </div>
+    <div class="summary" style="margin-top:16px">
+      <div class="row"><span>Contact</span><b>${escHtml(C.name || '-')}${C.contactId ? ` · ID ${escHtml(C.contactId)}` : ''}</b></div>
+      <div class="row"><span>Method</span><b>${mode === 'phone' ? 'Phone' : 'Door'}</b></div>
+      <div class="row"><span>Top concern</span><b>${escHtml(C.concern || '-')}</b></div>
+      <div class="row"><span>Support (1–5)</span><b>${supportPill}</b></div>
+      <div class="row"><span>${commitLabel}</span><b>${escHtml(commitVal)}</b></div>
+      ${t === 'fundraising' ? `<div class="row"><span>Payment method</span><b>${escHtml(C.donationMethod || '-')}</b></div>` : ''}
+      <div class="row"><span>Result code</span><b>${escHtml(C.resultCode)}</b></div>
+    </div>
+    ${extrasHtml}
+    <div class="note">
+      <label for="wrap-notes">Notes (optional)</label>
+      <textarea id="wrap-notes" placeholder="Callback time, specific issue, who answered, donation amount…"></textarea>
+    </div>
+    <div class="choices" style="margin-top:14px">
+      <button class="choice go" id="logNextBtn"><span class="ic">✓</span><span>Log &amp; next contact</span></button>
+    </div>
+  </div>`);
+
+  render(node);
+  updateWhoBar();
+  wireBack(node);
+  node.querySelectorAll('.seg[data-field]').forEach(seg => {
+    const field = seg.dataset.field;
+    seg.querySelectorAll('button').forEach(b => {
+      b.setAttribute('aria-pressed', C[field] === b.dataset.v ? 'true' : 'false');
+      b.onclick = () => {
+        C[field] = (C[field] === b.dataset.v) ? '' : b.dataset.v;
+        seg.querySelectorAll('button').forEach(x =>
+          x.setAttribute('aria-pressed', C[field] === x.dataset.v ? 'true' : 'false')
+        );
+      };
+    });
+  });
+
+  node.querySelector('#logNextBtn').onclick = async () => {
+    C.notes = node.querySelector('#wrap-notes').value.trim();
+    if (t === 'fundraising') {
+      const amtInput = node.querySelector('#amt-input');
+      if (amtInput) C.donationAmount = amtInput.value.trim();
+    }
+
+    const now   = new Date();
+    C.iso       = now.toISOString();
+    C.time      = now.toLocaleString();
+
+    if (C.contactId && log.some(r => r.contactId && r.contactId === C.contactId)) {
+      if (!confirm(`Contact ID ${C.contactId} is already in this session log. Log again anyway?`)) return;
+    }
+
+    log.unshift({ ...C, mode, canvasser: cfg.canvasser, campaignType: t, submitted: false });
+    await persistLog();
+    C = blankContact();
+    go('voterSetup');
+  };
+}
+
+
+/* ============================================================
+   MODE & NAVIGATION
+   ============================================================ */
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('mPhone').setAttribute('aria-pressed', m === 'phone' ? 'true' : 'false');
+  document.getElementById('mDoor').setAttribute('aria-pressed',  m === 'door'  ? 'true' : 'false');
+  if (C.step === 'voterSetup' || C.step === 'campaignSetup') SCREENS[C.step]();
+  else go(C.step);
+}
+
+function restartContact() { C = blankContact(); go('voterSetup'); }
+
+
+/* ============================================================
+   SHEETS - Log, FAQ, Guide, Preview
+   ============================================================ */
+
+function openSheet(which) {
+  const sheet   = document.getElementById('sheet');
+  const scrim   = document.getElementById('scrim');
+  const title   = document.getElementById('sheetTitle');
+  const body    = document.getElementById('sheetBody');
+  const actions = document.getElementById('sheetActions');
+  actions.hidden = true;
+  actions.innerHTML = '';
+
+  if (which === 'faq') {
+    title.textContent = 'Objections & answers';
+    const objections = getParsedScript().objections;
+    body.innerHTML = objections.length
+      ? objections.map(o =>
+          `<div class="faq"><h4>${escHtml(o.prompt)}</h4><p class="reply">${escHtml(fill(o.response))}</p></div>`
+        ).join('')
+      : `<div class="empty">No objections added yet.<br>Add a "## OBJECTIONS" section to your script in Campaign setup.</div>`;
+
+  } else if (which === 'guide') {
+    title.textContent = 'How to use this tool';
+    const adminScriptSection = isAdmin() ? `
+      <h4>🟦 Writing your script (organizers)</h4>
+      <p>In <b>⚙︎ Campaign setup</b>, paste your own script into one box. Mark each part with a header on its own line:</p>
+      <ul>
+        <li><code>## REACH</code> — what you say when someone answers <b>(required)</b></li>
+        <li><code>## INTRO</code> — who you are and why you're reaching out <b>(required)</b></li>
+        <li><code>## LISTEN</code> — how you ask what's on their mind (optional)</li>
+        <li><code>## CASE</code> — the case you make for your candidate or cause (optional)</li>
+        <li><code>## SUPPORT</code> — how you ask where they stand (optional)</li>
+        <li><code>## COMMIT</code> — the specific ask <b>(required)</b></li>
+        <li><code>## WRAP</code> — how you close the conversation <b>(required)</b></li>
+        <li><code>## OBJECTIONS</code> — common pushback and responses, as <code>Q:</code> / <code>A:</code> pairs</li>
+      </ul>
+      <div class="gcallout"><b>Reach, Intro, Commit, and Wrap must all have text</b> before you can save — the Save button will tell you what's missing. <b>Listen, Case, and Support are optional</b>: leave any of those blank and volunteers won't see that step at all, the flow skips straight to the next one.</div>
+      <p>Use <code>{variableName}</code> anywhere in your script to pull in a value from the fields above it, e.g. <code>{candidate}</code>, <code>{orgName}</code>, <code>{ctaDate}</code>. The live preview below the script box shows exactly how your text gets sliced into each step before you save, including a warning if any text isn't under a recognized header.</p>
+      <p>Topic chips and pre-written talking points are gone — everything volunteers see comes from your own script text now.</p>` : '';
+
+    body.innerHTML = `<div class="guidewrap">
+      <p>This tool walks you through a canvassing conversation one tap at a time. Read the quoted lines out loud, then tap the button that matches what the person says. It logs each contact for you, no paper needed.</p>
+      <h4>🟦 Before your first contact</h4>
+      <ol>
+        <li>Pick <b>Phone</b> or <b>Door</b> at the top, the script adjusts for each.</li>
+        <li>On the start screen, type <b>your name</b> (set once, it tags everyone you reach).</li>
+        <li>Confirm your organizer has finished <b>Campaign setup</b>, including the script.</li>
+      </ol>
+      <div class="gcallout"><b>One-time setup.</b> Campaign details and the script stay saved on this device, your organizer only enters them once.</div>
+      ${adminScriptSection}
+      <h4>🟦 For each contact</h4>
+      <p>Every conversation always includes Reach, Intro, Commit, and Wrap. Listen, Case, and Support only appear if your organizer wrote that section — otherwise the flow skips straight past it.</p>
+      <ol>
+        <li><b>Reach</b>: Confirm you have the right person. Wrong number, voicemail, or refusal? Tap it, the tool closes out and logs it correctly.</li>
+        <li><b>Intro</b>: One breath. Who you are, why you're here, ask for a minute.</li>
+        <li><b>Listen</b> <em style="font-style:normal;color:var(--faint);font-size:12px">(if included)</em>: Ask what's on their mind, let them talk, optionally jot a note for yourself.</li>
+        <li><b>The case</b> <em style="font-style:normal;color:var(--faint);font-size:12px">(if included)</em>: Whatever your organizer wrote for this step.</li>
+        <li><b>Where they stand</b> <em style="font-style:normal;color:var(--faint);font-size:12px">(if included)</em>: The 1–5 scale. Log what they actually say.</li>
+        <li><b>The ask</b>: Vote, action, donation, whatever the campaign type calls for.</li>
+        <li><b>Wrap</b>: Close, add optional flags and a note, tap Log &amp; next contact.</li>
+      </ol>
+      <h4>🟦 The 1–5 support scale</h4>
+      <div class="gkey"><span class="gchip sb1">1</span><span style="font-size:13.5px;color:var(--ink-soft)"><b style="color:var(--ink)">Strong support</b>, definitely with us</span></div>
+      <div class="gkey"><span class="gchip sb2">2</span><span style="font-size:13.5px;color:var(--ink-soft)"><b style="color:var(--ink)">Lean support</b>, leaning our way</span></div>
+      <div class="gkey"><span class="gchip sb3">3</span><span style="font-size:13.5px;color:var(--ink-soft)"><b style="color:var(--ink)">Undecided</b>, not sure yet</span></div>
+      <div class="gkey"><span class="gchip sb4">4</span><span style="font-size:13.5px;color:var(--ink-soft)"><b style="color:var(--ink)">Lean against</b>, leaning the other side</span></div>
+      <div class="gkey"><span class="gchip sb5">5</span><span style="font-size:13.5px;color:var(--ink-soft)"><b style="color:var(--ink)">Strong against</b>, set on something else</span></div>
+      <div class="gcallout">Log what they <b>actually say</b>. An honest score is more useful than a hopeful one. Never argue with a 4 or 5, stay gracious and move on.</div>
+      <h4>🟦 Made a mistake?</h4>
+      <p>Tap <b>‹ Back</b> at the top of any step (including Wrap) to return to the previous step in the current conversation and fix something, without losing what you've already entered. Back only moves within the current contact — it won't undo a contact you've already logged.</p>
+      <h4>🟦 Submitting your work</h4>
+      <ul>
+        <li>Every finished contact lands in <b>Log</b> (top right).</li>
+        <li>At the end of your shift, open Log and tap <b>Submit to Google Sheets</b>.</li>
+        <li>Entries marked <b>⏳ pending</b> haven't been sent. <b>✓ sent</b> have.</li>
+        <li>Work is saved on this device with no signal, submit later when you have it.</li>
+        <li><b>Download CSV</b> is a backup. <b>Undo last</b> removes the most recent entry. <b>Clear</b> wipes everything, don't use until all entries show ✓ sent.</li>
+      </ul>
+      <h4>🟦 Door canvassers: stay safe</h4>
+      <ul>
+        <li>Watch for signs someone's home but <b>stay on the porch</b>. Don't block the door.</li>
+        <li>No answer? Leave literature <b>on the door, not in the mailbox</b> (illegal).</li>
+        <li>Anyone asks you to leave, thank them and go. Your safety comes first.</li>
+      </ul>
+
+      <p style="margin-top:14px"><b>That's it.</b> Read the lines like a real person, listen more than you talk, log honestly. Thank you for being out there! 💙</p>
+    </div>`;
+
+  } else if (which === 'preview') {
+    title.textContent = 'Script preview';
+    const t = cfg.campaignType;
+    const isElection = ['primary','general'].includes(t);
+    const opponentsList = Array.isArray(cfg.opponents) ? cfg.opponents.filter(Boolean) : [];
+    const officeLine = [cfg.office, cfg.district].filter(Boolean).join(', ') + (cfg.county ? ` (${cfg.county})` : '');
+
+    const summaryRows = [
+      ['Organization', cfg.orgName],
+      ['Campaign type', CAMPAIGN_TYPE_LABELS[t] || '-'],
+      ['Key date', cfg.ctaDate],
+      ['Early action', cfg.earlyAction],
+      isElection ? ['Candidate', cfg.candidate] : null,
+      isElection ? ['Office', officeLine] : null,
+      t === 'ballot' ? ['Measure', cfg.measureName] : null,
+      t === 'ballot' ? ['Position', cfg.measurePosition ? `Vote ${cfg.measurePosition}` : ''] : null,
+      t === 'advocacy' ? ['Issue', cfg.issueName] : null,
+      t === 'nonprofit' ? ['Program', cfg.programName] : null,
+      (t === 'advocacy' || t === 'nonprofit') ? ['The ask', cfg.actionAsk] : null,
+      t === 'fundraising' ? ['Ask amount', cfg.askAmount] : null,
+      t === 'fundraising' ? ['Fallback amount', cfg.askAmountLow] : null,
+      t === 'fundraising' ? ['Fund purpose', cfg.fundPurpose] : null,
+    ].filter(Boolean);
+
+    const summaryHtml = `
+      <div class="summary" style="margin-bottom:16px">
+        ${summaryRows.map(([label, val]) =>
+          `<div class="row"><span>${escHtml(label)}</span><b>${val ? escHtml(val) : '<span style="color:var(--faint)">Not set</span>'}</b></div>`
+        ).join('')}
+        ${isElection ? `<div class="row"><span>Opponent(s)</span><b>${
+          opponentsList.length ? escHtml(opponentsList.join(', ')) : '<span style="color:var(--faint)">None listed</span>'
+        }</b></div>` : ''}
+      </div>`;
+
+    const parsed = getParsedScript();
+    const SLOT_LABELS2 = { reach: 'Reach', intro: 'Intro', listen: 'Listen', case: 'Case', support: 'Support', commit: 'Commit', wrap: 'Wrap' };
+    const slotsHtml = SLOT_NAMES.filter(s => s !== 'objections').map(slot => `
+      <h4>${SLOT_LABELS2[slot]}</h4>
+      ${slotHtml(slot, {}, '<p style="color:var(--faint)">Not set, this step will be skipped for volunteers.</p>')}
+    `).join('');
+
+    const objectionsHtml = parsed.objections.length
+      ? parsed.objections.map(o => `<p><b>${escHtml(o.prompt)}</b><br>${escHtml(fill(o.response))}</p>`).join('')
+      : `<p style="color:var(--faint)">No objections added yet.</p>`;
+
+    body.innerHTML = `<div class="guidewrap">
+      <p style="color:var(--faint);font-size:13px">This is what volunteers will see, pulled from your pasted script.</p>
+      ${summaryHtml}
+      ${slotsHtml}
+      <h4>Objections</h4>
+      ${objectionsHtml}
+    </div>`;
+
+  } else if (which === 'log') {
+    const pend = log.filter(r => !r.submitted).length;
+    title.textContent = `Session log (${log.length})`;
+
+    const banner = log.length ? `<div class="submitbar">
+      ${pend > 0
+        ? `<b>${pend}</b> entr${pend === 1 ? 'y' : 'ies'} not yet sent`
+        : `<b>All caught up ✓</b>`}
+      <div style="font-size:12.5px;color:var(--faint);font-weight:600">Tap <b>Submit to Google Sheets</b> to send your work.</div>
+    </div>` : '';
+
+    body.innerHTML = banner + statsHtml() + (
+      log.length
+        ? log.map(r => `<div class="logitem">
+            <b>${escHtml(r.name || '(no name)')}</b>
+            ${r.contactId ? `<span style="color:var(--faint)"> · ID ${escHtml(r.contactId)}</span>` : ''}
+            - ${r.mode === 'phone' ? 'Phone' : 'Door'}
+            ${r.support ? `<span class="pill ${SUPPORT_CLASS[r.support]}" style="color:#fff;margin-left:6px">${r.support}</span>` : ''}
+            <span class="sendtag ${r.submitted ? 'sent' : 'pend'}">${r.submitted ? '✓ sent' : '⏳ pending'}</span>
+            <div class="meta">${escHtml(r.resultCode || r.disposition || '')}
+              ${r.willVote   ? ' · vote: ' + r.willVote : ''}
+              ${r.committed  ? ' · committed: ' + r.committed : ''}
+              ${r.donationMethod ? ' · ' + r.donationMethod : ''}
+              ${r.donationAmount ? ' ' + r.donationAmount : ''}
+              ${r.voteMethod ? ' (' + escHtml(r.voteMethod) + ')' : ''}
+              ${r.concern    ? ' · ' + escHtml(r.concern) : ''}
+              ${r.yardSign === 'Yes' ? ' · 🪧 sign' : ''}
+              ${r.volunteer === 'Yes' ? ' · 🙋 volunteer' : ''}
+            </div>
+            <div class="meta">${escHtml(r.canvasser || '')}${r.canvasser ? ' · ' : ''}${r.time || ''}</div>
+            ${r.notes ? `<div class="meta">📝 ${escHtml(r.notes)}</div>` : ''}
+          </div>`).join('')
+        : `<div class="empty">No contacts logged yet.<br>Finished conversations show up here.</div>`
+    );
+
+    actions.hidden = false;
+    actions.innerHTML = log.length
+      ? `<button class="primary" id="submitBtn" onclick="submitToSheets(this)">
+           Submit to Google Sheets${pend > 0 ? ` (${pend})` : ''}
+         </button>
+         <button class="ghost" onclick="generateMyReport()">My Shift Report (PDF)</button>
+         ${isAdmin() ? `<button class="ghost" id="campaignReportBtn" onclick="generateCampaignReport()">Campaign Report (PDF)</button>` : ''}
+         <button class="ghost" onclick="exportCsv()">Download CSV (backup)</button>
+         <button class="ghost" onclick="undoLast()">Undo last</button>
+         <button class="danger" onclick="clearLog()">Clear</button>`
+      : `<button class="ghost" onclick="closeSheet()">Close</button>`;
+  }
+
+  sheet.classList.add('open');
+  scrim.classList.add('open');
+}
+
+function closeSheet() {
+  document.getElementById('sheet').classList.remove('open');
+  document.getElementById('scrim').classList.remove('open');
+}
+
+function statsHtml() {
+  if (!log.length) return '';
+  const canvassed  = log.filter(r => r.resultCode === 'Canvassed').length;
+  const supporters = log.filter(r => r.support === 1 || r.support === 2).length;
+  const committed  = log.filter(r => r.willVote === 'Yes' || r.committed === 'Yes').length;
+  const rate       = log.length ? Math.round(canvassed / log.length * 100) : 0;
+  const donated    = log.filter(r => (r.donationMethod || '').startsWith('Donated') || r.disposition?.startsWith('Donated')).length;
+  return `<div class="stats">
+    <div class="stat"><b>${log.length}</b><span>Attempts</span></div>
+    <div class="stat"><b>${canvassed}</b><span>Conversations</span></div>
+    <div class="stat"><b>${supporters}</b><span>Supporters (1–2)</span></div>
+    <div class="stat"><b>${committed}</b><span>Committed</span></div>
+    <div class="stat"><b>${rate}%</b><span>Contact rate</span></div>
+    ${donated ? `<div class="stat"><b>${donated}</b><span>Donations</span></div>` : ''}
+  </div>`;
+}
+
+
+/* ============================================================
+   EXPORT & SUBMIT
+   ============================================================ */
+
+const EXPORT_HEADERS = [
+  'Timestamp', 'LoggedAt', 'Canvasser', 'CampaignType', 'OrgName',
+  'ContactID', 'Name', 'Method', 'TopConcern',
+  'Support', 'SupportLabel', 'WillVote', 'Committed',
+  'DonationMethod', 'DonationAmount',
+  'VoteMethod', 'YardSign', 'Volunteer',
+  'ResultCode', 'Disposition', 'Notes',
+];
+
+function rowFor(r) {
+  return [
+    r.iso || '', r.time || '', r.canvasser || '', r.campaignType || '', cfg.orgName,
+    r.contactId || '', r.name || '', r.mode,
+    r.concern || '',
+    r.support || '', r.support ? ({1:'Strong support',2:'Lean support',3:'Undecided / unsure',4:'Lean against',5:'Strong against'})[r.support] : '',
+    r.willVote || '', r.committed || '',
+    r.donationMethod || '', r.donationAmount || '',
+    r.voteMethod || '', r.yardSign || '', r.volunteer || '',
+    r.resultCode || '', r.disposition || '',
+    (r.notes || '').replace(/[\r\n]+/g, ' '),
+  ];
+}
+
+function exportCsv() {
+  const csv = [EXPORT_HEADERS, ...log.map(rowFor)]
+    .map(row => row.map(c => `"${String(c).replace(/"/g, '""')}"`).join(','))
+    .join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'canvass_log.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function submitToSheets(btn) {
+  if (!cfg.endpoint) {
+    alert('No submit link set yet. Open Campaign setup and paste the Google Sheets link from your organizer.');
+    return;
+  }
+  const unsent = log.filter(r => !r.submitted);
+  if (!unsent.length) {
+    if (btn) { const t = btn.textContent; btn.textContent = 'Nothing new to send'; setTimeout(() => btn.textContent = t, 1600); }
+    return;
+  }
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+  try {
+    const res = await fetch(cfg.endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ header: EXPORT_HEADERS, rows: unsent.map(rowFor) }),
+    });
+    const out = await res.json();
+    if (!out || !out.ok) throw new Error(out?.error || 'Server rejected the data');
+    unsent.forEach(r => r.submitted = true);
+    await persistLog();
+    openSheet('log');
+  } catch(err) {
+    if (btn) btn.disabled = false;
+    openSheet('log');
+    alert('Could not reach Google Sheets. Entries are saved on this device, try again when you have signal, or use Download CSV.\n\n(' + err.message + ')');
+  }
+}
+
+async function undoLast() {
+  if (!log.length) return;
+  if (confirm('Remove the most recent logged contact (' + (log[0].name || 'no name') + ')?')) {
+    log.shift();
+    await persistLog();
+    openSheet('log');
+  }
+}
+
+async function clearLog() {
+  if (confirm('Clear all logged contacts? This cannot be undone.')) {
+    log = [];
+    await persistLog();
+    openSheet('log');
+  }
+}
+
+
+/* ============================================================
+   REPORTS
+   ─────────────────────────────────────────────────────────────
+   Two PDF reports available from the Log sheet:
+
+   generateMyReport()       — per-volunteer, from local session log,
+                              no network needed, visible to everyone.
+   generateCampaignReport() — admin only, fetches all submitted rows
+                              from Sheets via ?action=getLog, aggregates
+                              overall totals + per-volunteer breakdown.
+
+   Both share the same HTML/CSS shell (wrapReportHtml) and stats
+   building blocks (statsBlockHtml). The browser's Print → Save as PDF
+   dialog handles the actual file — no library dependency needed.
+   ============================================================ */
+
+// Normalize a record from either the local log (camelCase) or a parsed
+// Sheets row (PascalCase header keys) into a uniform shape.
+function normalizeContact(r) {
+  return {
+    canvasser:      r.Canvasser      || r.canvasser      || '',
+    resultCode:     r.ResultCode     || r.resultCode     || '',
+    support:        parseInt(r.Support || r.support)     || 0,
+    willVote:       r.WillVote       || r.willVote       || '',
+    committed:      r.Committed      || r.committed      || '',
+    yardSign:       r.YardSign       || r.yardSign       || '',
+    volunteer:      r.Volunteer      || r.volunteer      || '',
+    donationMethod: r.DonationMethod || r.donationMethod || '',
+    method:         r.Method         || r.mode           || '',
+  };
+}
+
+// Aggregate an array of contacts into the numbers we display in reports.
+function aggregateContacts(contacts) {
+  const norm  = contacts.map(normalizeContact);
+  const total = norm.length;
+  const convs = norm.filter(r => r.resultCode === 'Canvassed').length;
+  const rate  = total ? Math.round(convs / total * 100) : 0;
+  const sc    = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  norm.forEach(r => { if (r.support >= 1 && r.support <= 5) sc[r.support]++; });
+  return {
+    total,
+    conversations: convs,
+    rate,
+    supporters:  (sc[1] || 0) + (sc[2] || 0),
+    committed:   norm.filter(r => r.willVote === 'Yes' || r.committed === 'Yes').length,
+    yardSigns:   norm.filter(r => r.yardSign  === 'Yes').length,
+    volunteers:  norm.filter(r => r.volunteer === 'Yes').length,
+    notHome:     norm.filter(r => r.resultCode === 'Not Home').length,
+    voicemail:   norm.filter(r => r.resultCode === 'Left Message').length,
+    refused:     norm.filter(r => r.resultCode === 'Refused').length,
+    badRecord:   norm.filter(r => ['Wrong Number/Address','Moved','Deceased'].includes(r.resultCode)).length,
+    donations:   norm.filter(r => r.donationMethod && !['','Pending','-'].includes(r.donationMethod)).length,
+    phone:       norm.filter(r => r.method === 'phone').length,
+    door:        norm.filter(r => r.method === 'door').length,
+    sc,
+  };
+}
+
+// Shared HTML shell: Linkway header, styles, footer.
+function wrapReportHtml(orgName, subtitle, innerHtml) {
+  const now = new Date().toLocaleString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric',
+    hour: 'numeric', minute: '2-digit'
+  });
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${escHtml(orgName)} · Canvass Report</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  color:#16243B;background:#fff;padding:28px;max-width:700px;margin:0 auto;
+  font-size:14px;line-height:1.5}
+.hdr{display:flex;justify-content:space-between;align-items:flex-start;
+  border-bottom:3px solid #2456C6;padding-bottom:14px;margin-bottom:24px}
+.logo{font-size:24px;font-weight:900;letter-spacing:-.5px;color:#2456C6}
+.logo em{color:#16243B;font-style:normal}
+.hmeta{text-align:right;font-size:12px;color:#7C8AA0;line-height:1.7}
+.hmeta strong{font-size:15px;color:#16243B;display:block}
+h2{font-size:12px;font-weight:800;color:#2456C6;text-transform:uppercase;
+  letter-spacing:.6px;border-bottom:1px solid #E1E7F0;padding-bottom:6px;margin:24px 0 14px}
+.sgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px}
+.scard{background:#EAEEF4;border-radius:8px;padding:14px 10px}
+.scard.hi{background:#EAF0FC}
+.scard .v{font-size:28px;font-weight:900;line-height:1;color:#16243B}
+.scard.hi .v{color:#2456C6}
+.scard .l{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#7C8AA0;margin-top:5px}
+.suprow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.sup{border-radius:7px;padding:10px 12px;color:#fff;min-width:90px}
+.sup .sv{font-size:22px;font-weight:900;line-height:1}
+.sup .sl{font-size:10px;font-weight:700;margin-top:4px;opacity:.92}
+.s1{background:#1C8C57}.s2{background:#5DA94B}.s3{background:#E0A02E}
+.s4{background:#E27038}.s5{background:#CF3C3C}
+.outrow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.out{background:#F8FAFC;border:1px solid #E1E7F0;border-radius:7px;padding:10px 14px;min-width:96px}
+.out .ov{font-size:20px;font-weight:800;color:#16243B}
+.out .ol{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#7C8AA0;margin-top:3px}
+table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:18px}
+th{background:#2456C6;color:#fff;padding:9px 10px;text-align:left;
+  font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+td{padding:9px 10px;border-bottom:1px solid #E1E7F0}
+tr:nth-child(even) td{background:#F8FAFC}
+.dvdr{height:1px;background:#E1E7F0;margin:20px 0}
+.ftr{margin-top:32px;border-top:1px solid #E1E7F0;padding-top:12px;
+  display:flex;justify-content:space-between;font-size:11px;color:#7C8AA0}
+.ftr strong{color:#2456C6}
+@media print{
+  body{padding:0;font-size:12px}
+  .scard .v{font-size:22px}
+  .sup .sv{font-size:18px}
+  @page{margin:18mm}
+}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <div class="logo">LINK<em>WAY</em></div>
+  <div class="hmeta">
+    <strong>${escHtml(orgName)}</strong>
+    ${escHtml(subtitle)}<br>
+    Generated ${now}
+  </div>
+</div>
+${innerHtml}
+<div class="ftr">
+  <strong>LINKWAY</strong> Canvassing Tool
+  <span>${escHtml(orgName)} · ${now}</span>
+</div>
+</body>
+</html>`;
+}
+
+// Build the stats block shared by both report types.
+function statsBlockHtml(agg, title) {
+  const supLabels = {
+    1: 'Strong Support', 2: 'Lean Support', 3: 'Undecided',
+    4: 'Lean Against',   5: 'Strong Against'
+  };
+  return `
+    ${title ? `<h2>${escHtml(title)}</h2>` : ''}
+    <div class="sgrid">
+      <div class="scard hi"><div class="v">${agg.total}</div><div class="l">Attempts</div></div>
+      <div class="scard hi"><div class="v">${agg.conversations}</div><div class="l">Conversations</div></div>
+      <div class="scard hi"><div class="v">${agg.rate}%</div><div class="l">Contact Rate</div></div>
+      <div class="scard"><div class="v">${agg.supporters}</div><div class="l">Supporters (1–2)</div></div>
+      <div class="scard"><div class="v">${agg.committed}</div><div class="l">Committed</div></div>
+      <div class="scard ${agg.donations ? '' : ''}"><div class="v">${agg.donations || agg.yardSigns}</div><div class="l">${agg.donations ? 'Donations' : 'Yard Signs'}</div></div>
+    </div>
+    <h2>Support Breakdown</h2>
+    <div class="suprow">
+      ${[1,2,3,4,5].map(n =>
+        `<div class="sup s${n}">
+          <div class="sv">${agg.sc[n]}</div>
+          <div class="sl">${n} · ${supLabels[n]}</div>
+        </div>`
+      ).join('')}
+    </div>
+    <h2>Outcomes</h2>
+    <div class="outrow">
+      ${agg.yardSigns  ? `<div class="out"><div class="ov">${agg.yardSigns}</div><div class="ol">Yard Signs</div></div>` : ''}
+      ${agg.volunteers ? `<div class="out"><div class="ov">${agg.volunteers}</div><div class="ol">Will Volunteer</div></div>` : ''}
+      <div class="out"><div class="ov">${agg.notHome}</div><div class="ol">Not Home</div></div>
+      <div class="out"><div class="ov">${agg.voicemail}</div><div class="ol">Voicemail</div></div>
+      <div class="out"><div class="ov">${agg.refused}</div><div class="ol">Refused</div></div>
+      ${agg.badRecord  ? `<div class="out"><div class="ov">${agg.badRecord}</div><div class="ol">Bad Records</div></div>` : ''}
+      ${agg.phone      ? `<div class="out"><div class="ov">${agg.phone}</div><div class="ol">Phone</div></div>` : ''}
+      ${agg.door       ? `<div class="out"><div class="ov">${agg.door}</div><div class="ol">Door</div></div>` : ''}
+    </div>`;
+}
+
+// Per-volunteer PDF from the local session log. No network needed.
+// Filters to today's local date so a second session never sees stale contacts.
+function generateMyReport() {
+  if (!log.length) { alert('No contacts logged yet.'); return; }
+
+  const today   = new Date();
+  const todayY  = today.getFullYear();
+  const todayM  = today.getMonth();
+  const todayD  = today.getDate();
+  const todayLog = log.filter(r => {
+    if (!r.iso) return false;
+    const d = new Date(r.iso);
+    return d.getFullYear() === todayY && d.getMonth() === todayM && d.getDate() === todayD;
+  });
+
+  if (!todayLog.length) {
+    alert('No contacts logged today. (Older entries are still in the log for CSV export.)');
+    return;
+  }
+
+  const agg       = aggregateContacts(todayLog);
+  const canvasser = cfg.canvasser || 'Volunteer';
+  const dateStr   = today.toLocaleDateString('en-US', {
+    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
+  });
+  const inner = statsBlockHtml(agg, `My Shift · ${canvasser} · ${dateStr}`);
+  printReportHtml(wrapReportHtml(cfg.orgName || 'Campaign', canvasser + ' · Shift Report', inner));
+}
+
+// Campaign-wide PDF. Admin only.
+// Flow: picker first (no network yet) → fetch with server-side date params
+// → client-side precision filter as safety net → render.
+async function generateCampaignReport() {
+  if (!isAdmin()) {
+    alert('Campaign reports are restricted to admin accounts.');
+    return;
+  }
+  if (!cfg.endpoint) {
+    alert('No Google Sheets endpoint configured. Add the Apps Script URL in Campaign Setup.');
+    return;
+  }
+
+  // Show picker before any network call — user sees UI immediately.
+  // Resolves with { start: Date, end: Date|null, label: string } or null.
+  const pick = await campaignReportPicker();
+  if (!pick) return; // user cancelled
+
+  const { start, end, label } = pick;
+  const btn = document.getElementById('campaignReportBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Fetching data…'; }
+
+  try {
+    // Build URL with optional server-side date params (ISO strings, UTC).
+    // Server filters before sending rows, keeping payloads small.
+    // All Time sends no params → server returns every row.
+    let url = cfg.endpoint + '?action=getLog';
+    if (start) url += '&startDate=' + encodeURIComponent(start.toISOString());
+    if (end)   url += '&endDate='   + encodeURIComponent(end.toISOString());
+
+    const res  = await fetch(url);
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Server error');
+    if (!data.rows || !data.rows.length) {
+      alert('No contacts found for that date range.');
+      return;
+    }
+
+    // Convert header + rows into objects
+    const header   = data.header;
+    let contacts = data.rows.map(row => {
+      const obj = {};
+      header.forEach((h, i) => { obj[h] = row[i] != null ? String(row[i]) : ''; });
+      return obj;
+    });
+
+    // Precision client-side filter: the server filtered by UTC ISO comparison;
+    // this re-checks with exact local-time boundaries to catch any edge cases.
+    if (start || end) {
+      contacts = contacts.filter(c => {
+        const ts = c.Timestamp || c.LoggedAt || '';
+        if (!ts) return false;
+        const d = new Date(ts);
+        if (isNaN(d)) return false;
+        if (start && d < start) return false;
+        if (end   && d > end)   return false;
+        return true;
+      });
+    }
+
+    if (!contacts.length) {
+      alert('No contacts found for that date range.');
+      return;
+    }
+
+    const filtered = contacts;
+
+    // Group by canvasser name
+    const byCanvasser = {};
+    filtered.forEach(c => {
+      const name = c.Canvasser || 'Unknown';
+      if (!byCanvasser[name]) byCanvasser[name] = [];
+      byCanvasser[name].push(c);
+    });
+
+    const overall  = aggregateContacts(filtered);
+    const names    = Object.keys(byCanvasser).sort();
+    const hasDonations = overall.donations > 0;
+
+    // Per-volunteer table rows
+    const tableRows = names.map(name => {
+      const a = aggregateContacts(byCanvasser[name]);
+      return `<tr>
+        <td><b>${escHtml(name)}</b></td>
+        <td>${a.total}</td>
+        <td>${a.conversations}</td>
+        <td>${a.rate}%</td>
+        <td>${a.supporters}</td>
+        <td>${a.committed}</td>
+        <td>${a.yardSigns}</td>
+        <td>${a.volunteers}</td>
+        ${hasDonations ? `<td>${a.donations}</td>` : ''}
+      </tr>`;
+    }).join('');
+
+    const inner = `
+      ${statsBlockHtml(overall, `Campaign Summary · ${escHtml(label)}`)}
+      <div class="dvdr"></div>
+      <h2>Volunteer Breakdown — ${names.length} canvasser${names.length !== 1 ? 's' : ''}</h2>
+      <table>
+        <thead><tr>
+          <th>Canvasser</th>
+          <th>Attempts</th>
+          <th>Convos</th>
+          <th>Rate</th>
+          <th>Supporters</th>
+          <th>Committed</th>
+          <th>Signs</th>
+          <th>Vol.</th>
+          ${hasDonations ? '<th>Donations</th>' : ''}
+        </tr></thead>
+        <tbody>${tableRows}</tbody>
+      </table>`;
+
+    printReportHtml(wrapReportHtml(cfg.orgName || 'Campaign', 'Campaign Report · ' + label, inner));
+
+  } catch(err) {
+    alert('Could not fetch campaign data: ' + err.message);
+    if (btn) { btn.disabled = false; btn.textContent = 'Campaign Report (PDF)'; }
+  }
+}
+
+// Render a date-range picker inside the log sheet and resolve with
+// { start: Date, end: Date|null, label: string } or null if cancelled.
+// start/end are local-time boundaries passed as ISO strings to the server.
+// All Time resolves with { start: null, end: null, label: 'All Time' }.
+function campaignReportPicker() {
+  return new Promise(resolve => {
+    // Returns midnight-start and 23:59:59.999-end for a given local date.
+    function localDayBounds(date) {
+      const start = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
+      const end   = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+      return { start, end };
+    }
+
+    // Parse YYYY-MM-DD from <input type="date"> into a local Date (not UTC).
+    function parseLocalDate(str) {
+      const [y, m, d] = str.split('-').map(Number);
+      return new Date(y, m - 1, d);
+    }
+
+    // Format a Date as YYYY-MM-DD for <input type="date"> default values.
+    function toInputDate(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    const today    = new Date();
+    const todayStr = toInputDate(today);
+
+    // Inject picker UI at the top of the log sheet's scroll area.
+    const scrollEl = document.querySelector('#sheet .scroll');
+    if (!scrollEl) { resolve(null); return; }
+
+    const pickerEl = document.createElement('div');
+    pickerEl.id = 'campaignDatePicker';
+    pickerEl.style.cssText = 'margin:16px 0 8px;padding:16px;background:var(--surface);border:1px solid var(--line);border-radius:12px;';
+    pickerEl.innerHTML = `
+      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--blue);margin-bottom:12px;">
+        Campaign Report · Date Range
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+        <button class="ghost" id="crToday"   style="font-size:13px;padding:7px 14px;" onclick="crPickerSelect('today')">Today</button>
+        <button class="ghost" id="crWeek"    style="font-size:13px;padding:7px 14px;" onclick="crPickerSelect('week')">This Week</button>
+        <button class="ghost" id="crCustom"  style="font-size:13px;padding:7px 14px;" onclick="crPickerSelect('custom')">Custom Range</button>
+        <button class="ghost" id="crAllTime" style="font-size:13px;padding:7px 14px;" onclick="crPickerSelect('alltime')">All Time</button>
+      </div>
+      <div id="crCustomInputs" style="display:none;margin-bottom:12px;">
+        <label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px;">From</label>
+        <input type="date" id="crStart" value="${todayStr}"
+          style="border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:14px;width:100%;margin-bottom:8px;">
+        <label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px;">To</label>
+        <input type="date" id="crEnd" value="${todayStr}"
+          style="border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:14px;width:100%;margin-bottom:8px;">
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button style="flex:1;background:var(--blue);color:#fff;border:none;border-radius:999px;padding:10px 0;font-size:14px;font-weight:700;cursor:pointer;" onclick="crPickerConfirm()">Generate Report</button>
+        <button class="ghost" style="padding:10px 18px;font-size:14px;" onclick="crPickerCancel()">Cancel</button>
+      </div>`;
+
+    scrollEl.insertBefore(pickerEl, scrollEl.firstChild);
+
+    let selectedMode = null;
+
+    function crPickerSelect(mode) {
+      selectedMode = mode;
+      ['crToday','crWeek','crCustom','crAllTime'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.style.background = ''; el.style.color = ''; el.style.borderColor = ''; }
+      });
+      const activeId = { today:'crToday', week:'crWeek', custom:'crCustom', alltime:'crAllTime' }[mode];
+      const active = document.getElementById(activeId);
+      if (active) {
+        active.style.background  = 'var(--blue)';
+        active.style.color       = '#fff';
+        active.style.borderColor = 'var(--blue)';
+      }
+      const customInputs = document.getElementById('crCustomInputs');
+      if (customInputs) customInputs.style.display = mode === 'custom' ? 'block' : 'none';
+    }
+
+    function crPickerConfirm() {
+      if (!selectedMode) { alert('Please select a date range.'); return; }
+
+      let start, end, label;
+
+      if (selectedMode === 'today') {
+        ({ start, end } = localDayBounds(today));
+        label = today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+      } else if (selectedMode === 'week') {
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() - today.getDay()); // back to Sunday
+        ({ start } = localDayBounds(weekStart));
+        ({ end }   = localDayBounds(today));
+        const fmt = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        label = `${fmt(weekStart)}–${fmt(today)}, ${today.getFullYear()}`;
+
+      } else if (selectedMode === 'custom') {
+        const startStr = document.getElementById('crStart').value;
+        const endStr   = document.getElementById('crEnd').value;
+        if (!startStr || !endStr) { alert('Please enter both a start and end date.'); return; }
+        const startDate = parseLocalDate(startStr);
+        const endDate   = parseLocalDate(endStr);
+        if (endDate < startDate) { alert('End date must be on or after start date.'); return; }
+        ({ start } = localDayBounds(startDate));
+        ({ end }   = localDayBounds(endDate));
+        const fmt = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        label = `${fmt(startDate)} – ${fmt(endDate)}`;
+
+      } else {
+        // All Time — no bounds; server returns every row
+        start = null; end = null; label = 'All Time';
+      }
+
+      cleanup();
+      resolve({ start, end, label });
+    }
+
+    function crPickerCancel() {
+      cleanup();
+      resolve(null);
+    }
+
+    function cleanup() {
+      delete window.crPickerSelect;
+      delete window.crPickerConfirm;
+      delete window.crPickerCancel;
+      const el = document.getElementById('campaignDatePicker');
+      if (el) el.remove();
+    }
+
+    window.crPickerSelect  = crPickerSelect;
+    window.crPickerConfirm = crPickerConfirm;
+    window.crPickerCancel  = crPickerCancel;
+  });
+}
+
+// Open a print window, write the report HTML, and trigger Print → Save as PDF.
+function printReportHtml(html) {
+  const win = window.open('', '_blank', 'width=800,height=700');
+  if (!win) {
+    alert('Pop-up blocked. Allow pop-ups for this page and try again.');
+    return;
+  }
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 600);
+}
+
+
+/* ============================================================
+   BOOT
+   ============================================================ */
+(async function boot() {
+  try {
+    await loadCfg();
+
+    // Self-hosted: auto-wire the endpoint so organizers never have to paste it
+    if (typeof APPS_SCRIPT_URL === 'string' && APPS_SCRIPT_URL.startsWith('http')) {
+      cfg.endpoint = APPS_SCRIPT_URL;
+      await saveCfg();
+    }
+
+    // Volunteer config import.
+    // New format: ?ep=<base64(endpointUrl)> — fetches full config from Sheets.
+    // Legacy format: ?cfg=<base64(fullConfig)> — still supported so old links don't break.
+    const urlParams = new URLSearchParams(window.location.search);
+    const epParam   = urlParams.get('ep');
+    const cfgParam  = urlParams.get('cfg');
+
+    if (epParam) {
+      try {
+        const endpoint       = decodeURIComponent(escape(atob(epParam)));
+        const res            = await fetch(endpoint + '?action=getConfig');
+        const data           = await res.json();
+        if (data.ok && data.config) {
+          const imported       = JSON.parse(data.config);
+          const savedCanvasser = cfg.canvasser;
+          Object.assign(cfg, imported);
+          cfg.canvasser = savedCanvasser;
+          await saveCfg();
+        }
+        history.replaceState(null, '', window.location.pathname);
+      } catch(e) {
+        console.warn('Config fetch from endpoint failed:', e);
+      }
+    } else if (cfgParam) {
+      // Legacy ?cfg= links — decode inline as before
+      try {
+        const imported       = JSON.parse(decodeURIComponent(escape(atob(cfgParam))));
+        const savedCanvasser = cfg.canvasser;
+        Object.assign(cfg, imported);
+        cfg.canvasser = savedCanvasser;
+        await saveCfg();
+        history.replaceState(null, '', window.location.pathname);
+      } catch(e) {
+        console.warn('Config import from URL failed:', e);
+      }
+    }
+
+    await loadLog();
+    await loadAuth();
+
+    if (auth.approved && auth.email) {
+      // Already signed in on this device — skip straight to the app.
+      enterApp();
+    } else if (window.google && window.google.script && window.google.script.run) {
+      // Self-hosted in Apps Script: the visitor is already authenticated to
+      // Google just by opening the URL. Get their identity server-side —
+      // no GIS button or OAuth popup needed.
+      document.getElementById("signinWrap").hidden = false;
+      document.getElementById("appWrap").hidden = true;
+      renderSigninStatus("Checking your access…");
+      google.script.run
+        .withSuccessHandler(async function(result) {
+          try {
+            if (result && result.ok && result.approved) {
+              auth = {
+                email:    result.email,
+                name:     result.name || result.email,
+                approved: true,
+                role:     result.role || "Volunteer",
+              };
+              await saveAuth();
+              cfg.canvasser = auth.name;
+              await saveCfg();
+              enterApp();
+            } else if (result && result.email) {
+              renderSigninStatus(
+                result.email + " is not on this campaign's approved volunteer list. " +
+                "Ask your organizer to add you."
+              );
+            } else {
+              renderSigninStatus(
+                "Could not verify your identity. Make sure you are signed into " +
+                "Google and try reloading the page."
+              );
+            }
+          } catch(err) {
+            renderFatalError(err, "boot-auth");
+          }
+        })
+        .withFailureHandler(function(err) {
+          renderSigninStatus(
+            "Could not check your access. Try reloading the page. (" +
+            ((err && err.message) || "unknown error") + ")"
+          );
+        })
+        .getSignedInUser();
+    } else {
+      showSignin();
+    }
+  } catch (err) {
+    console.error('Boot failed:', err);
+    document.getElementById('signinWrap').hidden = true;
+    document.getElementById('appWrap').hidden = false;
+    renderFatalError(err, 'boot');
+  }
+})();
+</script>
