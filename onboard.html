@@ -1,5 +1,4 @@
 <!-- ============================================================
-
      Linkway — Customer Onboarding
      Self-serve campaign signup. Hosted on GitHub Pages alongside
      index.html. Shares the same APPS_SCRIPT_URL backend.
@@ -300,14 +299,14 @@
     </div>
 
     <div class="field">
-      <label for="slug">Campaign Link ID</label>
+      <label for="slug">Choose Your Campaign ID</label>
       <div class="slug-wrap">
-        <input type="text" id="slug" placeholder="jones2026" spellcheck="false" autocapitalize="none" autocomplete="off">
+        <input type="text" id="slug" placeholder="e.g. jones2026" spellcheck="false" autocapitalize="none" autocomplete="off">
         <span class="slug-badge hidden" id="slugBadge"></span>
       </div>
       <div class="field-hint" id="slugHint">
-        This becomes part of your volunteer link:
-        <strong id="slugPreview">linkway.app/?cid=…</strong>
+        Pick something short and memorable — this is the link your volunteers will use:
+        <strong id="slugPreview">…/?cid=yourcampaignid</strong>
       </div>
     </div>
 
@@ -364,32 +363,12 @@ const formStatus   = document.getElementById('formStatus');
 const formWrap     = document.getElementById('formWrap');
 const successWrap  = document.getElementById('successWrap');
 
-// ── Slug generation from org name ──────────────────────────────
-function slugify(s) {
-  return s.toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .trim()
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 30);
-}
-
-orgNameEl.addEventListener('input', () => {
-  const generated = slugify(orgNameEl.value);
-  if (generated) {
-    slugEl.value = generated;
-    onSlugInput();
-  }
-  updateSubmitState();
-});
-
 // ── Slug live check ────────────────────────────────────────────
 function onSlugInput() {
   const val = slugEl.value.trim().toLowerCase();
 
   // Update preview immediately
-  slugPreview.textContent = val ? 'linkway.app/?cid=' + val : 'linkway.app/?cid=…';
+  slugPreview.textContent = val ? '…/?cid=' + val : '…/?cid=yourcampaignid';
 
   // Reset badge
   setSlugBadge('hidden', '');
@@ -440,8 +419,8 @@ function setSlugBadge(cls, text) {
   // Restore hint to default if not an error state
   if (cls !== 'taken') {
     const val = slugEl.value.trim();
-    slugHint.innerHTML = 'This becomes part of your volunteer link: <strong id="slugPreview">' +
-      (val ? 'linkway.app/?cid=' + val : 'linkway.app/?cid=…') + '</strong>';
+    slugHint.innerHTML = 'Pick something short and memorable — this is the link your volunteers will use: <strong id="slugPreview">' +
+      (val ? '…/?cid=' + val : '…/?cid=yourcampaignid') + '</strong>';
   }
 }
 
