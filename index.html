@@ -516,7 +516,7 @@ function escHtmlSafe(s) {
    ============================================================ */
 
 const GOOGLE_CLIENT_ID = '347962833446-q6bb44u234bs495i6v24n8ve703berm6.apps.googleusercontent.com';
-const APPS_SCRIPT_URL  = 'https://script.google.com/macros/s/AKfycbxSQPpsF16ugGXSIs-lSJfUqhXbYjYbot5xKVtqOeU2uWKxkPRv64YB-B5d_3kKB4m0RQ/exec';
+const APPS_SCRIPT_URL  = 'https://script.google.com/macros/s/AKfycbwn9qCBySXm0AieifDzesdpCfsLV2u8NgCu21sZnexaG4LhiI5AEXk3vVP4dFhxcC-w/exec';
 
 // True when the endpoint above is baked in — the "Google Sheets submit
 // link" field in Campaign Setup is hidden in that case, since there is
@@ -584,7 +584,7 @@ async function checkApproved(email) {
     return { ok: false, reason: 'no-endpoint' };
   }
   try {
-    const url = cfg.endpoint + '?action=checkVolunteer&email=' + encodeURIComponent(email);
+    const url = cfg.endpoint + '?action=checkVolunteer&email=' + encodeURIComponent(email) + (cfg.campaignId ? '&c=' + encodeURIComponent(cfg.campaignId) : '');
     const res = await fetch(url);
     const out = await res.json();
     return out;
@@ -774,8 +774,9 @@ const cfg = {
   taxDeductible:  false,
   receiptPromise: '',
   // App settings
-  canvasser: '',
-  endpoint:  '',
+  canvasser:  '',
+  endpoint:   '',
+  campaignId: '',
   // Organizer-authored script (single pasted blob, parsed into slots)
   rawScript: '',
 };
@@ -802,16 +803,18 @@ function fill(template, extras = {}) {
 // existing canvasser name if they already have one saved locally.
 function buildShareUrl() {
   try {
+    // New centralized model: share link is just ?c=<campaignId>.
+    // The centralized endpoint is baked into the app, so volunteers
+    // only need the slug to reach the right campaign.
+    if (cfg.campaignId) {
+      return window.location.origin + window.location.pathname + '?c=' + encodeURIComponent(cfg.campaignId);
+    }
     if (!cfg.endpoint) return null;
-    // Extract just the deployment ID from the Apps Script URL.
-    // Full URL shape: https://script.google.com/macros/s/<ID>/exec
-    // The ID is already URL-safe so it needs no encoding, cutting link
-    // length roughly in half versus base64-encoding the whole URL.
+    // Legacy fallback: extract deployment ID for old single-tenant deployments.
     const m = cfg.endpoint.match(/\/macros\/s\/([^/]+)\/exec/);
     if (m) {
       return window.location.origin + window.location.pathname + '?d=' + m[1];
     }
-    // Fallback for non-standard endpoint shapes: base64-encode as before.
     const encoded = btoa(unescape(encodeURIComponent(cfg.endpoint)));
     return window.location.origin + window.location.pathname + '?ep=' + encoded;
   } catch(e) {
@@ -1139,7 +1142,6 @@ const SCREENS = {
         <input id="cs-early-label-custom" placeholder="Type your own title" style="margin-top:6px;display:none">
         <label for="cs-early-picker" style="margin-top:10px;display:block">Add a date (optional, can add more than one)</label>
         <input id="cs-early-picker" type="date" aria-label="Pick a date to add to early voting">
-        <div class="section-sub" style="margin-top:6px">Each date you pick is added as a bubble below. Tap a bubble's &#10005; to remove that date.</div>
         <div class="seg" id="cs-early-dates" style="margin-top:8px;flex-wrap:wrap"></div>
         <div class="section-sub" id="cs-early-preview" style="margin-top:4px"></div>
       </div>
@@ -1271,8 +1273,7 @@ const SCREENS = {
         </div>
       </div>
       <div class="field">
-        <label for="cs-script">&#9997;&#65039; Write or paste your script in the box below</label>
-        <div class="section-sub" style="margin-bottom:6px">The text box below is where your whole script lives. Type or paste your script into the text box; the two hashmarks "<code>##</code>" are required for each header line.</div>
+        <label for="cs-script">Paste your script</label>
         <textarea id="cs-script" rows="14" placeholder="##REACH&#10;Your opening line when someone answers.&#10;&#10;##INTRO&#10;Who you are and why you're reaching out.&#10;&#10;##LISTEN&#10;What you ask to hear their concerns. (optional)&#10;&#10;##CASE&#10;The case you make for your candidate or cause. (optional)&#10;&#10;##SUPPORT&#10;How you ask where they stand. (optional)&#10;&#10;##COMMIT&#10;The specific ask you make.&#10;&#10;##WRAP&#10;How you close the conversation.&#10;&#10;##OBJECTIONS&#10;Q: A common objection you hear.&#10;A: How you respond to it.">${escHtml(cfg.rawScript)}</textarea>
       </div>
       <div class="warning-box" id="scriptValidationMsg" hidden></div>
@@ -1411,10 +1412,6 @@ const SCREENS = {
     const earlyDatesEl     = node.querySelector('#cs-early-dates');
     const earlyPreviewEl   = node.querySelector('#cs-early-preview');
     function renderEarlyDates() {
-      if (!earlyDates.length) {
-        earlyDatesEl.innerHTML = '<span style="color:var(--faint);font-size:.85em">No dates added yet &mdash; dates you pick above will appear here.</span>';
-        return;
-      }
       earlyDatesEl.innerHTML = earlyDates.map((iso, i) =>
         `<button type="button" data-i="${i}" style="display:flex;align-items:center;gap:6px">${formatIsoDate(iso)} ✕</button>`
       ).join('');
@@ -1582,10 +1579,7 @@ const SCREENS = {
         // can fetch it. Excludes the canvasser field (personal, per-device).
         const shareConfig = { ...cfg };
         delete shareConfig.canvasser;
-        const res = await fetch(cfg.endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: 'saveConfig', config: JSON.stringify(shareConfig) }),
+        const res = await fetch(cfg.endpoint + (cfg.campaignId ? '?c=' + encodeURIComponent(cfg.campaignId) : ''), {
         });
         const out = await res.json();
         if (!out.ok) throw new Error(out.error || 'Server error');
@@ -2441,10 +2435,7 @@ async function submitToSheets(btn) {
   }
   if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
   try {
-    const res = await fetch(cfg.endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ header: EXPORT_HEADERS, rows: unsent.map(rowFor) }),
+    const res = await fetch(cfg.endpoint + (cfg.campaignId ? '?c=' + encodeURIComponent(cfg.campaignId) : ''), {
     });
     const out = await res.json();
     if (!out || !out.ok) throw new Error(out?.error || 'Server rejected the data');
@@ -2704,7 +2695,7 @@ async function generateCampaignReport() {
     // Build URL with optional server-side date params (ISO strings, UTC).
     // Server filters before sending rows, keeping payloads small.
     // All Time sends no params → server returns every row.
-    let url = cfg.endpoint + '?action=getLog';
+    let url = cfg.endpoint + '?action=getLog' + (cfg.campaignId ? '&c=' + encodeURIComponent(cfg.campaignId) : '');
     if (start) url += '&startDate=' + encodeURIComponent(start.toISOString());
     if (end)   url += '&endDate='   + encodeURIComponent(end.toISOString());
 
@@ -2967,16 +2958,19 @@ function printReportHtml(html) {
 
     // Volunteer config import.
     // Resolution order (newest-to-oldest, all legacy formats still work):
+    //   ?c=<slug>   -- centralized multi-tenant campaign id (Phase 2+)
     //   ?d=<id>     -- raw Apps Script deployment ID (no encoding needed)
     //   ?ep=<b64>   -- base64(endpointUrl), legacy since 2024
     //   ?cfg=<b64>  -- base64(fullConfig),  legacy before server-side config
     const urlParams = new URLSearchParams(window.location.search);
+    const cParam    = urlParams.get('c');
     const dParam    = urlParams.get('d');
     const epParam   = urlParams.get('ep');
     const cfgParam  = urlParams.get('cfg');
 
-    async function importFromEndpoint(endpoint) {
-      const res    = await fetch(endpoint + '?action=getConfig');
+    async function importFromEndpoint(endpoint, campaignId) {
+      const cSuffix = campaignId ? '&c=' + encodeURIComponent(campaignId) : '';
+      const res    = await fetch(endpoint + '?action=getConfig' + cSuffix);
       const data   = await res.json();
       if (data.ok && data.config) {
         const imported       = JSON.parse(data.config);
@@ -2988,7 +2982,18 @@ function printReportHtml(html) {
       history.replaceState(null, '', window.location.pathname);
     }
 
-    if (dParam) {
+    if (cParam) {
+      // Centralized model: slug routes to the right customer Sheet.
+      // Store the campaign id and fetch the campaign's config from the
+      // shared endpoint. The endpoint is already wired above from APPS_SCRIPT_URL.
+      try {
+        cfg.campaignId = cParam;
+        await saveCfg();
+        await importFromEndpoint(cfg.endpoint, cParam);
+      } catch(e) {
+        console.warn('Config fetch from campaign id failed:', e);
+      }
+    } else if (dParam) {
       // Deployment ID: reconstruct the full endpoint URL on the client.
       try {
         const endpoint = 'https://script.google.com/macros/s/' + dParam + '/exec';
