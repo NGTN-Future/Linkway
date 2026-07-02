@@ -1,5 +1,4 @@
 <!-- ============================================================
-
      Linkway — Customer Onboarding
      Self-serve campaign signup. Hosted on GitHub Pages alongside
      index.html. Shares the same APPS_SCRIPT_URL backend.
@@ -7,6 +6,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Get Started — Linkway</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 
 <style>
   /* ── Design tokens (mirrors index.html) ────────────────────── */
@@ -343,13 +343,15 @@
 </div><!-- .page -->
 
 <script>
-// ── Backend URL ────────────────────────────────────────────────
-// Same deployment as index.html.
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwn9qCBySXm0AieifDzesdpCfsLV2u8NgCu21sZnexaG4LhiI5AEXk3vVP4dFhxcC-w/exec';
+// ── Config ─────────────────────────────────────────────────────
+const APPS_SCRIPT_URL  = 'https://script.google.com/macros/s/AKfycbwn9qCBySXm0AieifDzesdpCfsLV2u8NgCu21sZnexaG4LhiI5AEXk3vVP4dFhxcC-w/exec';
+const GOOGLE_CLIENT_ID = '347962833446-q6bb44u234bs495i6v24n8ve703berm6.apps.googleusercontent.com';
+const TEMPLATE_ID      = '1BeUoMbxZmKQtbOR1nFovic6bq1zraMY0-7cMaA6CSQ4';
 
 // ── State ──────────────────────────────────────────────────────
-let slugState = 'unknown'; // 'unknown' | 'checking' | 'available' | 'taken'
+let slugState   = 'unknown'; // 'unknown' | 'checking' | 'available' | 'taken'
 let slugCheckTimer = null;
+let driveToken  = null; // set after Google OAuth
 
 // ── Elements ───────────────────────────────────────────────────
 const orgNameEl    = document.getElementById('orgName');
@@ -364,23 +366,40 @@ const formStatus   = document.getElementById('formStatus');
 const formWrap     = document.getElementById('formWrap');
 const successWrap  = document.getElementById('successWrap');
 
+// ── Google OAuth token client ──────────────────────────────────
+// Initialized once GIS loads. Requesting drive.file scope so the
+// customer's token can copy the template into their own Drive.
+let tokenClient;
+window.addEventListener('load', () => {
+  if (!window.google) return;
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: 'https://www.googleapis.com/auth/drive.file email profile',
+    callback: handleTokenResponse,
+  });
+});
+
+function handleTokenResponse(resp) {
+  if (resp.error) {
+    setStatus('Google sign-in failed. Please try again.', 'error');
+    submitBtn.disabled = false;
+    return;
+  }
+  driveToken = resp.access_token;
+  // Continue with campaign creation now that we have a Drive token
+  submitCampaign();
+}
+
 // ── Slug live check ────────────────────────────────────────────
 function onSlugInput() {
   const val = slugEl.value.trim().toLowerCase();
-
-  // Update preview immediately
   slugPreview.textContent = val ? '…/?cid=' + val : '…/?cid=yourcampaignid';
-
-  // Reset badge
   setSlugBadge('hidden', '');
   slugHint.className = 'field-hint';
   slugEl.className = '';
   slugState = 'unknown';
   updateSubmitState();
-
   if (!val) return;
-
-  // Debounce the server check
   clearTimeout(slugCheckTimer);
   slugCheckTimer = setTimeout(() => checkSlug(val), 600);
 }
@@ -389,11 +408,9 @@ async function checkSlug(slug) {
   setSlugBadge('checking', 'Checking…');
   slugState = 'checking';
   updateSubmitState();
-
   try {
     const res  = await fetch(APPS_SCRIPT_URL + '?action=checkSlug&slug=' + encodeURIComponent(slug));
     const data = await res.json();
-
     if (data.available) {
       setSlugBadge('ok', '✓ Available');
       slugEl.className = 'ok';
@@ -410,14 +427,12 @@ async function checkSlug(slug) {
     setSlugBadge('hidden', '');
     slugState = 'unknown';
   }
-
   updateSubmitState();
 }
 
 function setSlugBadge(cls, text) {
   slugBadge.className = 'slug-badge ' + cls;
   slugBadge.textContent = text;
-  // Restore hint to default if not an error state
   if (cls !== 'taken') {
     const val = slugEl.value.trim();
     slugHint.innerHTML = 'Pick something short and memorable — this is the link your volunteers will use: <strong id="slugPreview">' +
@@ -445,37 +460,61 @@ function updateSubmitState() {
   submitBtn.disabled = !ready;
 }
 
-// ── Form submit ────────────────────────────────────────────────
-submitBtn.addEventListener('click', async () => {
+// ── Form submit — triggers Google OAuth first ──────────────────
+submitBtn.addEventListener('click', () => {
   submitBtn.disabled = true;
+  setStatus('Connecting to Google…', '');
+  // Request a Drive token. When the user approves, handleTokenResponse
+  // fires and calls submitCampaign() to continue.
+  tokenClient.requestAccessToken({ prompt: 'consent' });
+});
+
+// ── Campaign creation — runs after OAuth token is in hand ──────
+async function submitCampaign() {
   setStatus('Creating your campaign…', '');
 
-  const body = {
-    slug:    slugEl.value.trim().toLowerCase(),
-    orgName: orgNameEl.value.trim(),
-    email:   adminEmailEl.value.trim().toLowerCase(),
-    type:    campTypeEl.value,
-  };
+  const slug    = slugEl.value.trim().toLowerCase();
+  const orgName = orgNameEl.value.trim();
+  const email   = adminEmailEl.value.trim().toLowerCase();
+  const type    = campTypeEl.value;
 
   try {
+    // Step 1: copy template into the customer's Drive using their token
+    const copyRes = await fetch(
+      'https://www.googleapis.com/drive/v3/files/' + TEMPLATE_ID + '/copy',
+      {
+        method:  'POST',
+        headers: {
+          Authorization:  'Bearer ' + driveToken,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name: orgName + ' - Linkway' }),
+      }
+    );
+    const copyData = await copyRes.json();
+    if (!copyData.id) {
+      throw new Error('Could not create your spreadsheet. Please try again.');
+    }
+    const sheetId = copyData.id;
+
+    // Step 2: register the campaign with the backend
     const res  = await fetch(APPS_SCRIPT_URL + '?action=createCampaign', {
       method:  'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body:    JSON.stringify(body),
+      body:    JSON.stringify({ slug, orgName, email, type, sheetId }),
     });
     const data = await res.json();
 
     if (data.ok) {
-      showSuccess(data.cid, body.email);
+      showSuccess(data.cid, email);
     } else {
-      setStatus(data.error || 'Something went wrong. Please try again.', 'error');
-      submitBtn.disabled = false;
+      throw new Error(data.error || 'Something went wrong. Please try again.');
     }
   } catch (err) {
-    setStatus('Network error — check your connection and try again.', 'error');
+    setStatus(err.message || 'Network error — check your connection and try again.', 'error');
     submitBtn.disabled = false;
   }
-});
+}
 
 function setStatus(msg, cls) {
   formStatus.textContent = msg;
@@ -485,13 +524,10 @@ function setStatus(msg, cls) {
 // ── Success screen ─────────────────────────────────────────────
 function showSuccess(cid, email) {
   const link = 'https://ngtn-future.github.io/Linkway/?cid=' + encodeURIComponent(cid);
-
   document.getElementById('successEmail').textContent = email;
   document.getElementById('successLink').textContent  = link;
-
   formWrap.style.display    = 'none';
   successWrap.style.display = 'block';
-
   document.getElementById('copyBtn').addEventListener('click', () => {
     navigator.clipboard.writeText(link).then(() => {
       document.getElementById('copyBtn').textContent = 'Copied!';
