@@ -1,0 +1,504 @@
+<!-- ============================================================
+
+     Linkway — Customer Onboarding
+     Self-serve campaign signup. Hosted on GitHub Pages alongside
+     index.html. Shares the same APPS_SCRIPT_URL backend.
+     ============================================================ -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Get Started — Linkway</title>
+
+<style>
+  /* ── Design tokens (mirrors index.html) ────────────────────── */
+  :root {
+    --ink:        #16243B;
+    --ink-soft:   #48586F;
+    --faint:      #7C8AA0;
+    --line:       #E1E7F0;
+    --bg:         #EAEEF4;
+    --surface:    #FFFFFF;
+    --blue:       #2456C6;
+    --blue-d:     #1A409A;
+    --blue-tint:  #EAF0FC;
+    --ok:         #1C8C57;
+    --ok-tint:    #E4F3EA;
+    --warn:       #CF3C3C;
+    --warn-tint:  #FDEAEA;
+    --amber:      #E89A2B;
+    --amber-tint: #FCF2DF;
+    --r:          16px;
+    --shadow:     0 1px 2px rgba(20,36,59,.06), 0 8px 24px rgba(20,36,59,.08);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+                 Helvetica, Arial, sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); line-height: 1.5; }
+
+  /* ── Page shell ─────────────────────────────────────────────── */
+  .page {
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 28px 16px 60px;
+  }
+
+  /* ── Brand header ───────────────────────────────────────────── */
+  .brand {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+  .brand-name {
+    font-size: 26px;
+    font-weight: 900;
+    letter-spacing: -.5px;
+    color: var(--ink);
+  }
+  .brand-name span { color: var(--blue); }
+  .brand-sub {
+    font-size: 14px;
+    color: var(--faint);
+    font-weight: 600;
+    margin-top: 3px;
+  }
+
+  /* ── Card ───────────────────────────────────────────────────── */
+  .card {
+    background: var(--surface);
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+    padding: 28px 24px;
+    width: 100%;
+    max-width: 480px;
+  }
+  .card-title {
+    font-size: 20px;
+    font-weight: 800;
+    margin: 0 0 4px;
+  }
+  .card-sub {
+    font-size: 14px;
+    color: var(--ink-soft);
+    margin: 0 0 24px;
+  }
+
+  /* ── Form fields ────────────────────────────────────────────── */
+  .field { margin-bottom: 18px; }
+  .field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .8px;
+    text-transform: uppercase;
+    color: var(--faint);
+    margin-bottom: 6px;
+  }
+  .field input,
+  .field select {
+    width: 100%;
+    border: 1.5px solid var(--line);
+    border-radius: 12px;
+    padding: 13px 14px;
+    font: inherit;
+    font-size: 16px;
+    background: var(--surface);
+    color: var(--ink);
+    transition: border-color .15s;
+    appearance: none;
+  }
+  .field select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237C8AA0' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 38px;
+  }
+  .field input:focus,
+  .field select:focus {
+    outline: none;
+    border-color: var(--blue);
+  }
+  .field input.ok    { border-color: var(--ok); }
+  .field input.error { border-color: var(--warn); }
+
+  /* ── Slug row: input + status badge ────────────────────────── */
+  .slug-wrap {
+    position: relative;
+  }
+  .slug-wrap input {
+    padding-right: 110px;
+    font-family: ui-monospace, "Cascadia Code", "Fira Mono", monospace;
+    font-size: 15px;
+  }
+  .slug-badge {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 11px;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+    pointer-events: none;
+    transition: opacity .15s;
+  }
+  .slug-badge.hidden  { opacity: 0; }
+  .slug-badge.ok      { background: var(--ok-tint);   color: var(--ok); }
+  .slug-badge.taken   { background: var(--warn-tint);  color: var(--warn); }
+  .slug-badge.checking { background: var(--blue-tint); color: var(--blue); }
+
+  .field-hint {
+    font-size: 12px;
+    color: var(--faint);
+    margin-top: 6px;
+    line-height: 1.4;
+  }
+  .field-hint.error { color: var(--warn); }
+
+  /* ── Submit button ──────────────────────────────────────────── */
+  .btn-primary {
+    width: 100%;
+    background: var(--blue);
+    color: #fff;
+    border: none;
+    border-radius: 999px;
+    padding: 15px;
+    font: inherit;
+    font-size: 16px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background .15s, opacity .15s;
+    margin-top: 8px;
+  }
+  .btn-primary:hover:not(:disabled) { background: var(--blue-d); }
+  .btn-primary:disabled { opacity: .45; cursor: not-allowed; }
+
+  /* ── Status message below button ────────────────────────────── */
+  .form-status {
+    margin-top: 14px;
+    font-size: 14px;
+    text-align: center;
+    color: var(--faint);
+    min-height: 20px;
+  }
+  .form-status.error { color: var(--warn); }
+
+  /* ── Success screen ─────────────────────────────────────────── */
+  #successWrap { display: none; }
+  .success-icon {
+    font-size: 48px;
+    text-align: center;
+    margin-bottom: 12px;
+  }
+  .success-title {
+    font-size: 22px;
+    font-weight: 800;
+    text-align: center;
+    margin: 0 0 6px;
+  }
+  .success-sub {
+    font-size: 14px;
+    color: var(--ink-soft);
+    text-align: center;
+    margin: 0 0 24px;
+    line-height: 1.5;
+  }
+
+  .link-box {
+    background: var(--bg);
+    border: 1.5px solid var(--line);
+    border-radius: 12px;
+    padding: 13px 14px;
+    font-family: ui-monospace, "Cascadia Code", "Fira Mono", monospace;
+    font-size: 13px;
+    word-break: break-all;
+    color: var(--blue-d);
+    margin-bottom: 10px;
+    line-height: 1.5;
+  }
+
+  .btn-copy {
+    width: 100%;
+    background: var(--blue-tint);
+    color: var(--blue-d);
+    border: none;
+    border-radius: 999px;
+    padding: 13px;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background .15s;
+    margin-bottom: 20px;
+  }
+  .btn-copy:hover { background: #d4e4f8; }
+
+  .next-steps {
+    background: var(--bg);
+    border-radius: 14px;
+    padding: 16px 18px;
+  }
+  .next-steps h4 {
+    margin: 0 0 10px;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+  .next-steps ol {
+    margin: 0;
+    padding-left: 20px;
+    color: var(--ink-soft);
+    font-size: 14px;
+    line-height: 1.8;
+  }
+  .next-steps ol li b { color: var(--ink); }
+
+  /* ── Divider ────────────────────────────────────────────────── */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--line);
+    margin: 22px 0;
+  }
+</style>
+
+<div class="page">
+
+  <div class="brand">
+    <div class="brand-name">Link<span>way</span></div>
+    <div class="brand-sub">Canvassing &amp; Volunteer Coordination</div>
+  </div>
+
+  <!-- ── Signup form ── -->
+  <div class="card" id="formWrap">
+    <h1 class="card-title">Set up your campaign</h1>
+    <p class="card-sub">Fill out the form below and your canvassing tool will be ready in seconds.</p>
+
+    <div class="field">
+      <label for="orgName">Organization / Campaign Name</label>
+      <input type="text" id="orgName" placeholder="e.g. Jones for City Council" autocomplete="organization">
+    </div>
+
+    <div class="field">
+      <label for="campType">Campaign Type</label>
+      <select id="campType">
+        <option value="" disabled selected>Select a type…</option>
+        <option value="primary">Primary Election</option>
+        <option value="general">General Election</option>
+        <option value="ballot">Ballot Measure</option>
+        <option value="advocacy">Issue Advocacy</option>
+        <option value="nonprofit">Nonprofit / Volunteer Recruit</option>
+        <option value="fundraising">Fundraising Canvass</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="adminEmail">Your Email Address</label>
+      <input type="email" id="adminEmail" placeholder="you@example.com" autocomplete="email">
+    </div>
+
+    <div class="field">
+      <label for="slug">Choose Your Campaign ID</label>
+      <div class="slug-wrap">
+        <input type="text" id="slug" placeholder="e.g. jones2026" spellcheck="false" autocapitalize="none" autocomplete="off">
+        <span class="slug-badge hidden" id="slugBadge"></span>
+      </div>
+      <div class="field-hint" id="slugHint">
+        Pick something short and memorable — this is the link your volunteers will use:
+        <strong id="slugPreview">…/?cid=yourcampaignid</strong>
+      </div>
+    </div>
+
+    <button class="btn-primary" id="submitBtn" disabled>Create My Campaign</button>
+    <div class="form-status" id="formStatus"></div>
+  </div>
+
+  <!-- ── Success screen ── -->
+  <div class="card" id="successWrap">
+    <div class="success-icon">🎉</div>
+    <h2 class="success-title">Your campaign is ready!</h2>
+    <p class="success-sub">
+      We sent setup instructions to <strong id="successEmail"></strong>.<br>
+      Share the link below with your volunteers.
+    </p>
+
+    <div class="link-box" id="successLink"></div>
+    <button class="btn-copy" id="copyBtn">Copy Link</button>
+
+    <hr class="divider">
+
+    <div class="next-steps">
+      <h4>Next steps</h4>
+      <ol>
+        <li><b>Open your link</b> and sign in with your Google account.</li>
+        <li><b>Go to Campaign Setup</b> to enter your script and campaign details.</li>
+        <li><b>Add volunteers</b> to the Approved Volunteers tab in your Google Sheet.</li>
+        <li><b>Share the link</b> with your team and start canvassing.</li>
+      </ol>
+    </div>
+  </div>
+
+</div><!-- .page -->
+
+<script>
+// ── Backend URL ────────────────────────────────────────────────
+// Same deployment as index.html.
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwn9qCBySXm0AieifDzesdpCfsLV2u8NgCu21sZnexaG4LhiI5AEXk3vVP4dFhxcC-w/exec';
+
+// ── State ──────────────────────────────────────────────────────
+let slugState = 'unknown'; // 'unknown' | 'checking' | 'available' | 'taken'
+let slugCheckTimer = null;
+
+// ── Elements ───────────────────────────────────────────────────
+const orgNameEl    = document.getElementById('orgName');
+const campTypeEl   = document.getElementById('campType');
+const adminEmailEl = document.getElementById('adminEmail');
+const slugEl       = document.getElementById('slug');
+const slugBadge    = document.getElementById('slugBadge');
+const slugHint     = document.getElementById('slugHint');
+const slugPreview  = document.getElementById('slugPreview');
+const submitBtn    = document.getElementById('submitBtn');
+const formStatus   = document.getElementById('formStatus');
+const formWrap     = document.getElementById('formWrap');
+const successWrap  = document.getElementById('successWrap');
+
+// ── Slug live check ────────────────────────────────────────────
+function onSlugInput() {
+  const val = slugEl.value.trim().toLowerCase();
+
+  // Update preview immediately
+  slugPreview.textContent = val ? '…/?cid=' + val : '…/?cid=yourcampaignid';
+
+  // Reset badge
+  setSlugBadge('hidden', '');
+  slugHint.className = 'field-hint';
+  slugEl.className = '';
+  slugState = 'unknown';
+  updateSubmitState();
+
+  if (!val) return;
+
+  // Debounce the server check
+  clearTimeout(slugCheckTimer);
+  slugCheckTimer = setTimeout(() => checkSlug(val), 600);
+}
+
+async function checkSlug(slug) {
+  setSlugBadge('checking', 'Checking…');
+  slugState = 'checking';
+  updateSubmitState();
+
+  try {
+    const res  = await fetch(APPS_SCRIPT_URL + '?action=checkSlug&slug=' + encodeURIComponent(slug));
+    const data = await res.json();
+
+    if (data.available) {
+      setSlugBadge('ok', '✓ Available');
+      slugEl.className = 'ok';
+      slugHint.className = 'field-hint';
+      slugState = 'available';
+    } else {
+      setSlugBadge('taken', '✗ Taken');
+      slugEl.className = 'error';
+      slugHint.className = 'field-hint error';
+      slugHint.innerHTML = data.error || 'That ID is not available.';
+      slugState = 'taken';
+    }
+  } catch (err) {
+    setSlugBadge('hidden', '');
+    slugState = 'unknown';
+  }
+
+  updateSubmitState();
+}
+
+function setSlugBadge(cls, text) {
+  slugBadge.className = 'slug-badge ' + cls;
+  slugBadge.textContent = text;
+  // Restore hint to default if not an error state
+  if (cls !== 'taken') {
+    const val = slugEl.value.trim();
+    slugHint.innerHTML = 'Pick something short and memorable — this is the link your volunteers will use: <strong id="slugPreview">' +
+      (val ? '…/?cid=' + val : '…/?cid=yourcampaignid') + '</strong>';
+  }
+}
+
+slugEl.addEventListener('input', onSlugInput);
+
+// ── Email validation ───────────────────────────────────────────
+function validEmail(s) {
+  return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s.trim());
+}
+
+adminEmailEl.addEventListener('input', updateSubmitState);
+campTypeEl.addEventListener('change', updateSubmitState);
+
+// ── Submit state ───────────────────────────────────────────────
+function updateSubmitState() {
+  const ready = orgNameEl.value.trim() &&
+                campTypeEl.value &&
+                validEmail(adminEmailEl.value) &&
+                slugEl.value.trim().length >= 3 &&
+                slugState === 'available';
+  submitBtn.disabled = !ready;
+}
+
+// ── Form submit ────────────────────────────────────────────────
+submitBtn.addEventListener('click', async () => {
+  submitBtn.disabled = true;
+  setStatus('Creating your campaign…', '');
+
+  const body = {
+    slug:    slugEl.value.trim().toLowerCase(),
+    orgName: orgNameEl.value.trim(),
+    email:   adminEmailEl.value.trim().toLowerCase(),
+    type:    campTypeEl.value,
+  };
+
+  try {
+    const res  = await fetch(APPS_SCRIPT_URL + '?action=createCampaign', {
+      method:  'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body:    JSON.stringify(body),
+    });
+    const data = await res.json();
+
+    if (data.ok) {
+      showSuccess(data.cid, body.email);
+    } else {
+      setStatus(data.error || 'Something went wrong. Please try again.', 'error');
+      submitBtn.disabled = false;
+    }
+  } catch (err) {
+    setStatus('Network error — check your connection and try again.', 'error');
+    submitBtn.disabled = false;
+  }
+});
+
+function setStatus(msg, cls) {
+  formStatus.textContent = msg;
+  formStatus.className = 'form-status' + (cls ? ' ' + cls : '');
+}
+
+// ── Success screen ─────────────────────────────────────────────
+function showSuccess(cid, email) {
+  const link = 'https://ngtn-future.github.io/Linkway/?cid=' + encodeURIComponent(cid);
+
+  document.getElementById('successEmail').textContent = email;
+  document.getElementById('successLink').textContent  = link;
+
+  formWrap.style.display    = 'none';
+  successWrap.style.display = 'block';
+
+  document.getElementById('copyBtn').addEventListener('click', () => {
+    navigator.clipboard.writeText(link).then(() => {
+      document.getElementById('copyBtn').textContent = 'Copied!';
+      setTimeout(() => {
+        document.getElementById('copyBtn').textContent = 'Copy Link';
+      }, 2000);
+    });
+  });
+}
+</script>
