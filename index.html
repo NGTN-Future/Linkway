@@ -2989,7 +2989,7 @@ function printReportHtml(html) {
       try {
         cfg.campaignId = cParam;
         await saveCfg();
-        await importFromEndpoint(cfg.endpoint, cParam);
+        await importFromEndpoint(APPS_SCRIPT_URL, cParam);
       } catch(e) {
         console.warn('Config fetch from campaign id failed:', e);
       }
