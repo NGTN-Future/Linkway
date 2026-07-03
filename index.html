@@ -1300,6 +1300,7 @@ const SCREENS = {
       <div class="choices" style="margin-top:18px">
         <button class="choice go" id="saveCampaignBtn"><span class="ic">✓</span><span>Save campaign</span></button>
         <button class="choice" id="previewBtn"><span class="ic">👁</span><span>Preview script</span></button>
+        <button class="choice go" id="goCanvassingBtn" hidden><span class="ic">▶</span><span>Go to canvassing tool</span></button>
       </div>
 
       <!-- ── Share with volunteers ── -->
@@ -1549,12 +1550,27 @@ const SCREENS = {
 
       await saveCfg();
       const btn = node.querySelector('#saveCampaignBtn');
-      btn.querySelector('span:last-child').textContent = 'Saved ✓';
-      // Give a beat to see the confirmation, then move forward to start canvassing
-      setTimeout(() => { go('voterSetup'); }, 500);
+      btn.querySelector('span:last-child').textContent = 'Publishing\u2026';
+      btn.disabled = true;
+
+      // Auto-publish config to Sheets so the share link is ready immediately.
+      // renderShareLink() handles its own error display; we just wait for it.
+      await renderShareLink();
+
+      btn.querySelector('span:last-child').textContent = 'Saved \u2713';
+      btn.disabled = false;
+
+      // Reveal the "go to canvassing" button and scroll share link into view
+      const goCanvBtn = node.querySelector('#goCanvassingBtn');
+      if (goCanvBtn) goCanvBtn.hidden = false;
+      const linkEl = node.querySelector('#shareLinkDisplay');
+      if (linkEl && !linkEl.hidden) {
+        setTimeout(() => linkEl.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
+      }
     };
 
     node.querySelector('#previewBtn').onclick = () => openSheet('preview');
+    node.querySelector('#goCanvassingBtn').onclick = () => go('voterSetup');
 
     // ── Share link wiring ─────────────────────────────────
     // Pushing config to Sheets first means the share URL only needs to
@@ -3059,5 +3075,8 @@ function printReportHtml(html) {
     document.getElementById('appWrap').hidden = false;
     renderFatalError(err, 'boot');
   }
+})();
+</script>
+
 })();
 </script>
