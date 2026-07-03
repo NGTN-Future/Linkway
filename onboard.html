@@ -367,14 +367,16 @@ const formWrap     = document.getElementById('formWrap');
 const successWrap  = document.getElementById('successWrap');
 
 // ── Google OAuth token client ──────────────────────────────────
-// Initialized once GIS loads. Requesting drive.file scope so the
+// Initialized once GIS loads. Requesting drive scope so the
 // customer's token can copy the template into their own Drive.
+// drive.file is insufficient — it only covers files created by this app,
+// not the Linkway template file, which causes a silent failure on copy.
 let tokenClient;
 window.addEventListener('load', () => {
   if (!window.google) return;
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: GOOGLE_CLIENT_ID,
-    scope: 'https://www.googleapis.com/auth/drive.file email profile',
+    scope: 'https://www.googleapis.com/auth/drive email profile',
     callback: handleTokenResponse,
   });
 });
@@ -492,12 +494,13 @@ async function submitCampaign() {
     );
     const copyData = await copyRes.json();
     if (!copyData.id) {
-      throw new Error('Could not create your spreadsheet. Please try again.');
+      const reason = (copyData.error && copyData.error.message) ? copyData.error.message : ('HTTP ' + copyRes.status);
+      throw new Error('Could not create your spreadsheet (' + reason + '). Please try again.');
     }
     const sheetId = copyData.id;
 
     // Step 2 of 3: share the new sheet with the Linkway service account as Editor
-    // Uses the same Drive token — drive.file scope covers permissions on files
+    // Uses the same Drive token — drive scope covers permissions on files
     // created by this token.
     setStatus('Step 2 of 3: Connecting Linkway to your spreadsheet…', '');
     const permRes = await fetch(
@@ -516,7 +519,9 @@ async function submitCampaign() {
       }
     );
     if (!permRes.ok) {
-      throw new Error('Could not share your spreadsheet with Linkway. Please try again.');
+      const permData = await permRes.json().catch(() => ({}));
+      const reason = (permData.error && permData.error.message) ? permData.error.message : ('HTTP ' + permRes.status);
+      throw new Error('Could not share your spreadsheet with Linkway (' + reason + '). Please try again.');
     }
 
     // Step 3 of 3: register the campaign with the backend
