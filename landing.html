@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Linkway — Canvassing and Volunteer Coordination for Small Campaigns</title>
+<meta name="description" content="Linkway gives small political campaigns and nonprofits a simple, affordable tool for door-to-door canvassing and volunteer coordination. Get set up in minutes.">
+
+<style>
+
+/* ================================================================
+   DESIGN TOKENS
+   These are the master color and spacing values for the whole page.
+   Change a value here and it updates everywhere it's used below.
+   ================================================================ */
+:root {
+
+  /* ── Text colors ─────────────────────────────────────────────
+     --ink       : main body text (very dark navy)
+     --ink-soft  : secondary body text (medium navy-gray)
+     --faint     : muted text like captions, placeholders, footer links
+  ─────────────────────────────────────────────────────────────── */
+  --ink:        #16243B;
+  --ink-soft:   #48586F;
+  --faint:      #7C8AA0;
+
+  /* ── Surface and border colors ───────────────────────────────
+     --line      : border / divider color (light blue-gray)
+     --bg        : page background (very light blue-gray)
+     --surface   : card / panel background (white)
+  ─────────────────────────────────────────────────────────────── */
+  --line:       #E1E7F0;
+  --bg:         #EAEEF4;
+  --surface:    #FFFFFF;
+
+  /* ── Accent / brand colors ───────────────────────────────────
+     --blue      : primary blue used on buttons, icons, links
+     --blue-d    : darker blue used on button hover states
+     --blue-tint : very light blue used on icon backgrounds and badges
+  ─────────────────────────────────────────────────────────────── */
+  --blue:       #2456C6;
+  --blue-d:     #1A409A;
+  --blue-tint:  #EAF0FC;
+
+  /* ── Green (used on the data-ownership callout only) ─────────
+     --ok        : green icon circle background
+     --ok-tint   : green banner background
+  ─────────────────────────────────────────────────────────────── */
+  --ok:         #1C8C57;
+  --ok-tint:    #E4F3EA;
+
+  /* ── Shadows ─────────────────────────────────────────────────
+     Applied to feature cards and the privacy policy card.
+     First layer: tight contact shadow. Second layer: soft ambient.
+  ─────────────────────────────────────────────────────────────── */
+  --shadow: 0 1px 2px rgba(20,36,59,.06), 0 8px 24px rgba(20,36,59,.08);
+
+  /* ── Font stack ──────────────────────────────────────────────
+     Falls back through system fonts. No external font needed.
+  ─────────────────────────────────────────────────────────────── */
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+               Helvetica, Arial, sans-serif;
+}
+
+
+/* ================================================================
+   RESET + BASE
+   ================================================================ */
+*, *::before, *::after { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  line-height: 1.6;
+}
+/* Default link color throughout the page */
+a { color: var(--blue); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+
+/* ================================================================
+   NAVIGATION BAR
+   The sticky top bar with the Linkway logo and a CTA button.
+   ================================================================ */
+nav {
+  background: var(--surface);              /* white bar */
+  border-bottom: 1px solid var(--line);   /* thin divider below nav */
+  padding: 14px 24px;                     /* vertical 14px, horizontal 24px */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;         /* logo left, button right */
+  position: sticky;                       /* sticks to top on scroll */
+  top: 0;
+  z-index: 10;                            /* stays above page content */
+}
+
+/* "Linkway" wordmark in the nav */
+.nav-brand {
+  font-size: 20px;         /* RESIZE: increase to make logo text bigger */
+  font-weight: 900;
+  letter-spacing: -.4px;
+  color: var(--ink);
+  text-decoration: none;
+}
+/* The "way" part of "Linkway" is blue */
+.nav-brand span { color: var(--blue); }
+
+/* "Get started free" button in the top-right of the nav */
+.nav-cta {
+  background: var(--blue);        /* CHANGE BUTTON COLOR: swap var(--blue) for any hex */
+  color: #fff;
+  font-weight: 800;
+  font-size: 14px;                /* RESIZE BUTTON TEXT: increase for larger text */
+  padding: 10px 20px;             /* RESIZE BUTTON: top/bottom 10px, left/right 20px */
+  border-radius: 999px;           /* pill shape; lower value (e.g. 8px) for rounded rectangle */
+  text-decoration: none;
+  transition: background .15s;
+}
+.nav-cta:hover {
+  background: var(--blue-d);      /* CHANGE HOVER COLOR: swap for any hex */
+  text-decoration: none;
+}
+
+
+/* ================================================================
+   LAYOUT HELPERS
+   Two width containers used throughout the page.
+   .container        — wide (860px), used for feature grid, steps, etc.
+   .container-narrow — narrow (620px), used for hero and CTA band text.
+   ================================================================ */
+.container {
+  max-width: 860px;       /* RESIZE: increase for wider sections */
+  margin: 0 auto;
+  padding: 0 24px;        /* side padding on smaller screens */
+}
+.container-narrow {
+  max-width: 620px;       /* RESIZE: increase for wider hero/CTA text block */
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* Default vertical padding for each <section> */
+section { padding: 72px 0; }             /* RESIZE: 72px top and bottom per section */
+section + section { padding-top: 0; }   /* adjacent sections don't double-stack padding */
+
+
+/* ================================================================
+   HERO SECTION
+   The big header area with the main headline, subheading, and CTAs.
+   ================================================================ */
+.hero {
+  background: var(--surface);          /* white background (different from page bg) */
+  padding: 80px 0 72px;               /* RESIZE: top 80px, bottom 72px */
+  border-bottom: 1px solid var(--line); /* thin line separating hero from features */
+  text-align: center;
+}
+
+/* Small pill badge above the headline: "Built for small campaigns and nonprofits" */
+.hero-eyebrow {
+  display: inline-block;
+  font-size: 11px;              /* RESIZE: badge text size */
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--blue);           /* CHANGE: badge text color */
+  background: var(--blue-tint); /* CHANGE: badge background color */
+  padding: 5px 14px;            /* RESIZE: badge padding (top/bottom 5px, left/right 14px) */
+  border-radius: 999px;         /* pill shape */
+  margin-bottom: 24px;          /* space between badge and headline */
+}
+
+/* Main headline */
+.hero h1 {
+  font-size: clamp(28px, 5vw, 46px); /* RESIZE: min 28px on mobile, max 46px on desktop */
+  font-weight: 900;
+  letter-spacing: -.8px;
+  line-height: 1.15;
+  color: var(--ink);
+  margin: 0 0 20px;             /* space below headline */
+}
+/* The blue-colored word(s) in the headline */
+.hero h1 span { color: var(--blue); } /* CHANGE: color of highlighted words in headline */
+
+/* Subheading paragraph under the headline */
+.hero-sub {
+  font-size: clamp(16px, 2.5vw, 19px); /* RESIZE: min 16px mobile, max 19px desktop */
+  color: var(--ink-soft);
+  max-width: 520px;                     /* RESIZE: max width of subheading text block */
+  margin: 0 auto 36px;                  /* centered, 36px below before buttons */
+  line-height: 1.55;
+}
+
+/* Row of CTA buttons in the hero */
+.hero-actions {
+  display: flex;
+  gap: 14px;                  /* RESIZE: space between the two buttons */
+  justify-content: center;
+  flex-wrap: wrap;            /* buttons stack on mobile */
+}
+
+/* Primary blue CTA button — "Set up your campaign" */
+.btn-primary {
+  background: var(--blue);    /* CHANGE BUTTON COLOR: swap for any hex */
+  color: #fff;
+  font-weight: 800;
+  font-size: 16px;            /* RESIZE BUTTON TEXT */
+  padding: 14px 30px;         /* RESIZE BUTTON: top/bottom 14px, left/right 30px */
+  border-radius: 999px;       /* pill; lower value for rounded rectangle */
+  text-decoration: none;
+  transition: background .15s;
+  display: inline-block;
+}
+.btn-primary:hover {
+  background: var(--blue-d);  /* CHANGE HOVER COLOR */
+  text-decoration: none;
+}
+
+/* Secondary ghost button — "See how it works" */
+.btn-secondary {
+  background: var(--surface); /* white fill */
+  color: var(--ink-soft);
+  font-weight: 700;
+  font-size: 16px;            /* RESIZE BUTTON TEXT */
+  padding: 13px 28px;         /* RESIZE BUTTON: slightly smaller padding than primary */
+  border-radius: 999px;
+  border: 1.5px solid var(--line);  /* CHANGE BORDER: swap var(--line) for a color */
+  text-decoration: none;
+  transition: border-color .15s;
+  display: inline-block;
+}
+.btn-secondary:hover {
+  border-color: var(--faint); /* CHANGE HOVER BORDER COLOR */
+  text-decoration: none;
+}
+
+/* Small note below the buttons */
+.hero-proof {
+  margin-top: 28px;           /* space above this line */
+  font-size: 13px;            /* RESIZE: small print text size */
+  color: var(--faint);        /* CHANGE: muted text color */
+}
+
+
+/* ================================================================
+   SECTION LABELS (eyebrow / title / subtitle)
+   Reused in the features, steps, and audience sections.
+   ================================================================ */
+
+/* Small uppercase label above a section title: "What you get" */
+.section-eyebrow {
+  font-size: 11px;            /* RESIZE */
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--blue);         /* CHANGE: eyebrow color */
+  margin-bottom: 10px;
+}
+
+/* Large section headline */
+.section-title {
+  font-size: clamp(22px, 4vw, 32px); /* RESIZE: min 22px mobile, max 32px desktop */
+  font-weight: 900;
+  letter-spacing: -.4px;
+  line-height: 1.2;
+  color: var(--ink);
+  margin: 0 0 14px;           /* space below headline before subtitle */
+}
+
+/* Section subtitle / description paragraph */
+.section-sub {
+  font-size: 17px;            /* RESIZE */
+  color: var(--ink-soft);
+  margin: 0;
+  max-width: 500px;           /* RESIZE: how wide the subtitle text can be */
+  line-height: 1.55;
+}
+
+
+/* ================================================================
+   FEATURE CARDS GRID
+   Six cards in a responsive grid under "What you get".
+   ================================================================ */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  /* RESIZE: minmax(240px, 1fr) — change 240px to control min card width.
+     Smaller = more columns on desktop. Larger = fewer, wider columns. */
+  gap: 20px;                  /* RESIZE: space between cards */
+  margin-top: 48px;           /* space above the card grid */
+}
+
+/* Individual feature card */
+.feature-card {
+  background: var(--surface);           /* white card */
+  border: 1px solid var(--line);        /* CHANGE BORDER: swap var(--line) for a color */
+  border-radius: 18px;                  /* RESIZE CORNER: lower = squarer cards */
+  padding: 28px 24px;                   /* RESIZE: inner card spacing (top/bottom 28px, sides 24px) */
+  box-shadow: var(--shadow);
+}
+
+/* Square icon container at the top of each card */
+.feature-icon {
+  width: 42px;                          /* RESIZE ICON BOX: width */
+  height: 42px;                         /* RESIZE ICON BOX: height */
+  background: var(--blue-tint);         /* CHANGE ICON BOX COLOR */
+  border-radius: 12px;                  /* RESIZE ICON BOX CORNER */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 18px;                  /* space below icon before card title */
+}
+
+/* The SVG icon inside the icon box */
+.feature-icon svg {
+  width: 22px;                          /* RESIZE ICON: the actual SVG icon size */
+  height: 22px;
+  stroke: var(--blue);                  /* CHANGE ICON COLOR */
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Card headline */
+.feature-title {
+  font-size: 16px;            /* RESIZE */
+  font-weight: 800;
+  margin: 0 0 8px;            /* space below title */
+  color: var(--ink);
+}
+
+/* Card body text */
+.feature-body {
+  font-size: 14.5px;          /* RESIZE */
+  color: var(--ink-soft);
+  line-height: 1.55;
+  margin: 0;
+}
+
+
+/* ================================================================
+   DATA OWNERSHIP CALLOUT (green banner below the feature cards)
+   "Your data lives in your Google Drive, not ours"
+   ================================================================ */
+.ownership-bar {
+  background: var(--ok-tint);       /* CHANGE BANNER BG: light green */
+  border: 1px solid #B6DFCA;        /* CHANGE BANNER BORDER: medium green */
+  border-radius: 14px;              /* RESIZE CORNER */
+  padding: 22px 24px;               /* RESIZE: inner padding */
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;                        /* space between the icon circle and the text */
+  margin-top: 48px;                 /* space above this callout (below the card grid) */
+}
+
+/* Green circle with a checkmark */
+.ownership-icon {
+  width: 36px;                      /* RESIZE CIRCLE */
+  height: 36px;
+  background: var(--ok);            /* CHANGE CIRCLE COLOR: dark green */
+  border-radius: 99px;
+  flex-shrink: 0;                   /* prevents the icon from squishing */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ownership-icon svg {
+  width: 18px;                      /* RESIZE CHECKMARK SVG */
+  height: 18px;
+  stroke: #fff;
+  fill: none;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Callout headline (bold green text) */
+.ownership-text strong {
+  display: block;
+  font-size: 15px;                  /* RESIZE */
+  font-weight: 800;
+  color: var(--ok);                 /* CHANGE: headline color */
+  margin-bottom: 4px;
+}
+/* Callout body paragraph */
+.ownership-text p {
+  font-size: 14px;                  /* RESIZE */
+  color: #2A6048;                   /* CHANGE: dark green body text */
+  margin: 0;
+  line-height: 1.5;
+}
+
+
+/* ================================================================
+   HOW IT WORKS SECTION (3 numbered steps)
+   Has a white background to visually separate it from the features.
+   ================================================================ */
+.steps-bg {
+  background: var(--surface);           /* white background (not the gray page bg) */
+  border-top: 1px solid var(--line);    /* divider above */
+  border-bottom: 1px solid var(--line); /* divider below */
+  padding: 72px 0;                      /* RESIZE: top/bottom padding */
+}
+
+/* Grid of step items */
+.steps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  /* RESIZE: change 200px to control min step column width */
+  gap: 32px;                            /* RESIZE: space between steps */
+  margin-top: 48px;
+}
+
+/* Individual step item */
+.step {
+  position: relative;
+  padding-left: 52px;   /* RESIZE: must be wider than the number circle to clear it */
+}
+
+/* The numbered circle (1, 2, 3) */
+.step-num {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 36px;                    /* RESIZE CIRCLE: width */
+  height: 36px;                   /* RESIZE CIRCLE: height */
+  background: var(--blue);        /* CHANGE CIRCLE COLOR */
+  color: #fff;
+  border-radius: 999px;
+  font-size: 15px;                /* RESIZE NUMBER SIZE */
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Step headline */
+.step-title {
+  font-size: 16px;                /* RESIZE */
+  font-weight: 800;
+  color: var(--ink);
+  margin: 4px 0 8px;             /* top 4px (aligns with circle), bottom 8px before body */
+}
+
+/* Step body text */
+.step-body {
+  font-size: 14.5px;             /* RESIZE */
+  color: var(--ink-soft);
+  line-height: 1.55;
+  margin: 0;
+}
+
+
+/* ================================================================
+   WHO IT'S FOR SECTION (audience cards)
+   Four cards: Local candidates / Ballot initiatives / Nonprofits / Clubs
+   ================================================================ */
+
+/* Grid of audience cards */
+.audience-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  /* RESIZE: change 180px to control min card width */
+  gap: 16px;                      /* RESIZE: space between cards */
+  margin-top: 48px;
+}
+
+/* Individual audience card */
+.audience-card {
+  background: var(--surface);
+  border: 1px solid var(--line);    /* CHANGE BORDER COLOR */
+  border-radius: 14px;              /* RESIZE CORNER */
+  padding: 22px 20px;               /* RESIZE: inner card padding */
+  box-shadow: var(--shadow);
+}
+
+/* Small uppercase label at the top of each audience card */
+.audience-label {
+  font-size: 13px;                  /* RESIZE */
+  font-weight: 800;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  color: var(--blue);               /* CHANGE LABEL COLOR */
+  margin-bottom: 6px;               /* space below label */
+}
+
+/* Audience card body text */
+.audience-desc {
+  font-size: 14px;                  /* RESIZE */
+  color: var(--ink-soft);
+  line-height: 1.5;
+  margin: 0;
+}
+
+
+/* ================================================================
+   CTA BAND
+   The big blue "Start canvassing today" section near the bottom.
+   ================================================================ */
+.cta-band {
+  background: var(--blue);   /* CHANGE BAND COLOR: the full-width background */
+  padding: 72px 0;           /* RESIZE: top/bottom padding */
+  text-align: center;
+}
+
+/* CTA band headline */
+.cta-band h2 {
+  font-size: clamp(22px, 4vw, 34px); /* RESIZE: min 22px mobile, max 34px desktop */
+  font-weight: 900;
+  color: #fff;               /* CHANGE HEADLINE COLOR */
+  letter-spacing: -.4px;
+  margin: 0 0 14px;          /* space below headline */
+}
+
+/* CTA band subtext */
+.cta-band p {
+  font-size: 17px;           /* RESIZE */
+  color: rgba(255,255,255,.8); /* CHANGE: semi-transparent white */
+  margin: 0 auto 32px;       /* centered, 32px below before button */
+  max-width: 460px;          /* RESIZE: max width of the text block */
+}
+
+/* White CTA button inside the blue band */
+.btn-white {
+  background: #fff;                   /* CHANGE BUTTON COLOR */
+  color: var(--blue-d);               /* CHANGE BUTTON TEXT COLOR */
+  font-weight: 800;
+  font-size: 16px;                    /* RESIZE BUTTON TEXT */
+  padding: 14px 32px;                 /* RESIZE BUTTON: top/bottom 14px, sides 32px */
+  border-radius: 999px;               /* pill shape */
+  text-decoration: none;
+  display: inline-block;
+  transition: opacity .15s;
+}
+.btn-white:hover { opacity: .92; text-decoration: none; }
+
+/* Small note below the button in the CTA band */
+.cta-band-note {
+  margin-top: 16px;           /* space above this note */
+  font-size: 13px;            /* RESIZE */
+  color: rgba(255,255,255,.6); /* CHANGE: dimmer white */
+}
+
+
+/* ================================================================
+   FOOTER
+   ================================================================ */
+footer {
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  padding: 36px 24px;               /* RESIZE: footer padding */
+}
+
+.footer-inner {
+  max-width: 860px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;                        /* RESIZE: gap between footer items when they wrap */
+}
+
+/* "Linkway" wordmark in the footer */
+.footer-brand {
+  font-size: 16px;                  /* RESIZE */
+  font-weight: 900;
+  color: var(--ink);
+  letter-spacing: -.3px;
+}
+.footer-brand span { color: var(--blue); }
+
+/* Footer navigation links */
+.footer-links {
+  display: flex;
+  gap: 24px;                        /* RESIZE: space between footer links */
+  flex-wrap: wrap;
+}
+.footer-links a {
+  font-size: 14px;                  /* RESIZE */
+  color: var(--faint);              /* CHANGE LINK COLOR: muted by default */
+  text-decoration: none;
+}
+.footer-links a:hover { color: var(--ink-soft); }
+
+/* Copyright line at the bottom of the footer */
+.footer-copy {
+  width: 100%;
+  font-size: 13px;                  /* RESIZE */
+  color: var(--faint);
+  margin-top: 8px;
+}
+
+
+/* ================================================================
+   RESPONSIVE ADJUSTMENTS
+   Tighten padding on screens narrower than 580px (most phones).
+   ================================================================ */
+@media (max-width: 580px) {
+  nav { padding: 12px 16px; }
+  .container, .container-narrow { padding: 0 16px; }
+  section { padding: 52px 0; }
+  .hero { padding: 56px 0 52px; }
+  .steps-bg { padding: 52px 0; }
+  .cta-band { padding: 52px 0; }
+  /* On very small screens the ownership bar stacks icon above text */
+  .ownership-bar { flex-direction: column; }
+}
+
+</style>
+</head>
+<body>
+
+
+<!-- ================================================================
+     NAVIGATION BAR
+     Logo on the left, "Get started free" button on the right.
+     To change the button destination: update href="onboard.html"
+     ================================================================ -->
+<nav>
+  <a href="/" class="nav-brand">Link<span>way</span></a>
+  <a href="onboard.html" class="nav-cta">Get started free</a>
+</nav>
+
+
+<!-- ================================================================
+     HERO SECTION
+     Main headline, subheading, two CTA buttons, and a proof line.
+     ================================================================ -->
+<div class="hero">
+  <div class="container-narrow">
+
+    <!-- Small badge above the headline -->
+    <!-- EDIT: Change the text inside this span to update the badge -->
+    <div class="hero-eyebrow">Built for small campaigns and nonprofits</div>
+
+    <!-- Main headline. The <span> makes "done simply" appear in blue. -->
+    <!-- EDIT: Change text to update headline. Wrap any words in <span></span> to color them blue. -->
+    <h1>Canvassing and volunteer coordination, <span>done simply</span></h1>
+
+    <!-- Subheading paragraph -->
+    <!-- EDIT: Update this paragraph to change the hero description -->
+    <p class="hero-sub">Linkway gives your team a door-to-door canvassing tool and volunteer list that works together — no bloated software, no IT setup, no lock-in.</p>
+
+    <!-- Two CTA buttons -->
+    <!-- EDIT href="onboard.html" to change where the primary button goes -->
+    <!-- EDIT href="#how-it-works" to change where the secondary button scrolls to -->
+    <div class="hero-actions">
+      <a href="onboard.html" class="btn-primary">Set up your campaign</a>
+      <a href="#how-it-works" class="btn-secondary">See how it works</a>
+    </div>
+
+    <!-- Small reassurance line below buttons -->
+    <!-- EDIT: Change this text to update the proof statement -->
+    <p class="hero-proof">Free to get started &mdash; your data stays in your own Google Drive</p>
+
+  </div>
+</div>
+
+
+<!-- ================================================================
+     FEATURES SECTION — "What you get"
+     Six feature cards in a responsive grid.
+     To add a card: copy one .feature-card block and paste it in the grid.
+     To remove a card: delete a .feature-card block.
+     ================================================================ -->
+<section>
+  <div class="container">
+
+    <!-- Section label and intro text -->
+    <div class="section-eyebrow">What you get</div>
+    <h2 class="section-title">Everything a small campaign actually needs</h2>
+    <p class="section-sub">No subscription tiers, no feature gates. One straightforward tool your volunteers can pick up on the first day.</p>
+
+    <!-- ── Feature cards grid ────────────────────────────────── -->
+    <div class="features-grid">
+
+      <!-- CARD 1: Door-to-door canvassing -->
+      <!-- EDIT: Change .feature-title and .feature-body text to update this card -->
+      <!-- EDIT: To change the icon, replace the SVG path(s) inside .feature-icon svg -->
+      <div class="feature-card">
+        <div class="feature-icon">
+          <!-- Icon: house -->
+          <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        </div>
+        <p class="feature-title">Door-to-door canvassing</p>
+        <p class="feature-body">Walk volunteers through a talking script, record support levels, and log notes at each door &mdash; all from a phone browser, no app install needed.</p>
+      </div>
+
+      <!-- CARD 2: Volunteer management -->
+      <div class="feature-card">
+        <div class="feature-icon">
+          <!-- Icon: people/group -->
+          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        </div>
+        <p class="feature-title">Volunteer management</p>
+        <p class="feature-body">Maintain an approved volunteer list. Volunteers sign in with Google and are checked against your list automatically &mdash; no passwords to manage.</p>
+      </div>
+
+      <!-- CARD 3: Google Sheets -->
+      <div class="feature-card">
+        <div class="feature-icon">
+          <!-- Icon: table/grid -->
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        </div>
+        <p class="feature-title">Google Sheets as your database</p>
+        <p class="feature-body">Every canvass log and voter contact lives in a Google Sheet that you own. Export, filter, or share it the same way you would any spreadsheet.</p>
+      </div>
+
+      <!-- CARD 4: Reports -->
+      <div class="feature-card">
+        <div class="feature-icon">
+          <!-- Icon: bar chart -->
+          <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        </div>
+        <p class="feature-title">Campaign reports</p>
+        <p class="feature-body">See doors knocked, support tallies, and issue breakdowns for any date range. Generate a print-ready PDF summary for organizer meetings.</p>
+      </div>
+
+      <!-- CARD 5: Setup speed -->
+      <div class="feature-card">
+        <div class="feature-icon">
+          <!-- Icon: clock -->
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <p class="feature-title">Ready in minutes</p>
+        <p class="feature-body">Sign up, pick a campaign name, and your volunteers have a working canvassing tool. No server config, no IT department, no waiting.</p>
+      </div>
+
+      <!-- CARD 6: Any device -->
+      <div class="feature-card">
+        <div class="feature-icon">
+          <!-- Icon: monitor/screen -->
+          <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        </div>
+        <p class="feature-title">Works on any device</p>
+        <p class="feature-body">Volunteers use it from an iPhone, Android, or desktop browser. Nothing to download or update &mdash; it's just a webpage that works.</p>
+      </div>
+
+    </div>
+    <!-- ── End feature cards grid ────────────────────────────── -->
+
+    <!-- ── Data ownership green callout bar ──────────────────── -->
+    <!-- EDIT: Update the <strong> and <p> inside .ownership-text to change the message -->
+    <div class="ownership-bar">
+      <div class="ownership-icon">
+        <!-- Icon: checkmark -->
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div class="ownership-text">
+        <strong>Your data lives in your Google Drive, not ours</strong>
+        <p>During signup, Linkway copies a template spreadsheet directly into your own Google Drive. All canvass logs and voter contacts stay in a Sheet that belongs to you &mdash; you can take it, share it, or delete it at any time.</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ================================================================
+     HOW IT WORKS SECTION — 3 numbered steps
+     id="how-it-works" lets the "See how it works" button scroll here.
+     ================================================================ -->
+<div class="steps-bg" id="how-it-works">
+  <div class="container">
+
+    <!-- Section label and intro text -->
+    <div class="section-eyebrow">How it works</div>
+    <h2 class="section-title">From signup to first knock in three steps</h2>
+    <p class="section-sub">Linkway is designed to get out of your way. There's nothing to install and no technical knowledge required.</p>
+
+    <!-- ── Steps grid ─────────────────────────────────────────── -->
+    <!-- To add a step: copy a .step block and update the number, title, and body.
+         Also update the grid column count via grid-template-columns in CSS above. -->
+    <div class="steps-grid">
+
+      <!-- STEP 1 -->
+      <!-- EDIT: Change .step-num, .step-title, and .step-body for each step -->
+      <div class="step">
+        <div class="step-num">1</div>
+        <p class="step-title">Create your campaign</p>
+        <p class="step-body">Sign up with a Google account. Linkway copies a campaign spreadsheet into your Drive and sets up your unique volunteer sign-in link.</p>
+      </div>
+
+      <!-- STEP 2 -->
+      <div class="step">
+        <div class="step-num">2</div>
+        <p class="step-title">Add your volunteers</p>
+        <p class="step-body">Paste your volunteers' Google email addresses into the Approved Volunteers tab of your spreadsheet. That's all &mdash; they can sign in immediately.</p>
+      </div>
+
+      <!-- STEP 3 -->
+      <div class="step">
+        <div class="step-num">3</div>
+        <p class="step-title">Send them the canvassing link</p>
+        <p class="step-body">Share your campaign's canvassing URL. Volunteers open it on their phone, sign in with Google, and start logging doors. Results appear in your Sheet in real time.</p>
+      </div>
+
+    </div>
+    <!-- ── End steps grid ─────────────────────────────────────── -->
+
+  </div>
+</div>
+
+
+<!-- ================================================================
+     WHO IT'S FOR SECTION — audience cards
+     ================================================================ -->
+<section>
+  <div class="container">
+
+    <!-- Section label and intro text -->
+    <div class="section-eyebrow">Who uses Linkway</div>
+    <h2 class="section-title">Built for the campaigns big software ignores</h2>
+    <p class="section-sub">Enterprise canvassing platforms are expensive and complicated. Linkway is built for teams that need results, not a learning curve.</p>
+
+    <!-- ── Audience cards grid ────────────────────────────────── -->
+    <!-- To add an audience type: copy an .audience-card block and paste it in the grid -->
+    <div class="audience-grid">
+
+      <!-- AUDIENCE CARD 1 -->
+      <!-- EDIT: Change .audience-label and .audience-desc for each card -->
+      <div class="audience-card">
+        <div class="audience-label">Local candidates</div>
+        <p class="audience-desc">City council, school board, state legislature &mdash; races where you know every volunteer by name.</p>
+      </div>
+
+      <!-- AUDIENCE CARD 2 -->
+      <div class="audience-card">
+        <div class="audience-label">Ballot initiatives</div>
+        <p class="audience-desc">Single-issue campaigns that need to move fast and don't have time for six-week software onboarding.</p>
+      </div>
+
+      <!-- AUDIENCE CARD 3 -->
+      <div class="audience-card">
+        <div class="audience-label">Nonprofits</div>
+        <p class="audience-desc">Issue advocacy groups doing community outreach and neighborhood organizing.</p>
+      </div>
+
+      <!-- AUDIENCE CARD 4 -->
+      <div class="audience-card">
+        <div class="audience-label">Political clubs</div>
+        <p class="audience-desc">Party chapters and civic organizations coordinating volunteer canvass events across a district.</p>
+      </div>
+
+    </div>
+    <!-- ── End audience cards grid ───────────────────────────── -->
+
+  </div>
+</section>
+
+
+<!-- ================================================================
+     CTA BAND
+     Full-width blue section with a headline and "Create your campaign" button.
+     ================================================================ -->
+<div class="cta-band">
+  <div class="container-narrow">
+
+    <!-- EDIT: Change headline text -->
+    <h2>Start canvassing today</h2>
+
+    <!-- EDIT: Change subtext -->
+    <p>Set up your campaign in a few minutes. No credit card, no contracts &mdash; just a tool that works.</p>
+
+    <!-- EDIT: Update href to change where this button goes -->
+    <a href="onboard.html" class="btn-white">Create your campaign</a>
+
+    <!-- EDIT: Change this small note below the button -->
+    <p class="cta-band-note">Your data stays in your own Google Drive from day one.</p>
+
+  </div>
+</div>
+
+
+<!-- ================================================================
+     FOOTER
+     Brand name on the left, links in the middle, copyright below.
+     ================================================================ -->
+<footer>
+  <div class="footer-inner">
+
+    <!-- Wordmark -->
+    <div class="footer-brand">Link<span>way</span></div>
+
+    <!-- Footer links -->
+    <!-- EDIT: Add, remove, or change links here -->
+    <!-- EDIT: Update href="mailto:..." to change the contact email -->
+    <div class="footer-links">
+      <a href="onboard.html">Get started</a>
+      <a href="privacy.html">Privacy policy</a>
+      <a href="mailto:ngtnleadership@gmail.com">Contact</a>
+    </div>
+
+    <!-- Copyright line -->
+    <!-- EDIT: Update the year if needed -->
+    <p class="footer-copy">&copy; 2025 Linkway. All rights reserved.</p>
+
+  </div>
+</footer>
+
+
+</body>
+</html>
