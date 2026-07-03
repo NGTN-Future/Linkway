@@ -471,15 +471,14 @@ submitBtn.addEventListener('click', () => {
 
 // ── Campaign creation — runs after OAuth token is in hand ──────
 async function submitCampaign() {
-  setStatus('Creating your campaign…', '');
-
   const slug    = slugEl.value.trim().toLowerCase();
   const orgName = orgNameEl.value.trim();
   const email   = adminEmailEl.value.trim().toLowerCase();
   const type    = campTypeEl.value;
 
   try {
-    // Step 1: copy template into the customer's Drive using their token
+    // Step 1 of 3: copy template into the customer's Drive using their token
+    setStatus('Step 1 of 3: Copying your spreadsheet…', '');
     const copyRes = await fetch(
       'https://www.googleapis.com/drive/v3/files/' + TEMPLATE_ID + '/copy',
       {
@@ -497,7 +496,31 @@ async function submitCampaign() {
     }
     const sheetId = copyData.id;
 
-    // Step 2: register the campaign with the backend
+    // Step 2 of 3: share the new sheet with the Linkway service account as Editor
+    // Uses the same Drive token — drive.file scope covers permissions on files
+    // created by this token.
+    setStatus('Step 2 of 3: Connecting Linkway to your spreadsheet…', '');
+    const permRes = await fetch(
+      'https://www.googleapis.com/drive/v3/files/' + sheetId + '/permissions',
+      {
+        method:  'POST',
+        headers: {
+          Authorization:  'Bearer ' + driveToken,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          role:         'writer',
+          type:         'user',
+          emailAddress: 'linkway-bot@linkway-501103.iam.gserviceaccount.com',
+        }),
+      }
+    );
+    if (!permRes.ok) {
+      throw new Error('Could not share your spreadsheet with Linkway. Please try again.');
+    }
+
+    // Step 3 of 3: register the campaign with the backend
+    setStatus('Step 3 of 3: Registering your campaign…', '');
     const res  = await fetch(APPS_SCRIPT_URL + '?action=createCampaign', {
       method:  'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
