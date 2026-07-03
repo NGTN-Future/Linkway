@@ -346,7 +346,6 @@
 // ── Config ─────────────────────────────────────────────────────
 const APPS_SCRIPT_URL  = 'https://script.google.com/macros/s/AKfycbwn9qCBySXm0AieifDzesdpCfsLV2u8NgCu21sZnexaG4LhiI5AEXk3vVP4dFhxcC-w/exec';
 const GOOGLE_CLIENT_ID = '347962833446-q6bb44u234bs495i6v24n8ve703berm6.apps.googleusercontent.com';
-const TEMPLATE_ID      = '1BeUoMbxZmKQtbOR1nFovic6bq1zraMY0-7cMaA6CSQ4';
 
 // ── State ──────────────────────────────────────────────────────
 let slugState   = 'unknown'; // 'unknown' | 'checking' | 'available' | 'taken'
@@ -367,16 +366,15 @@ const formWrap     = document.getElementById('formWrap');
 const successWrap  = document.getElementById('successWrap');
 
 // ── Google OAuth token client ──────────────────────────────────
-// Initialized once GIS loads. Requesting drive scope so the
-// customer's token can copy the template into their own Drive.
-// drive.file is insufficient — it only covers files created by this app,
-// not the Linkway template file, which causes a silent failure on copy.
+// Requesting drive.file scope so the customer's token can create a
+// new spreadsheet in their own Drive. drive.file covers files created
+// by this app — no broader Drive access is needed or requested.
 let tokenClient;
 window.addEventListener('load', () => {
   if (!window.google) return;
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: GOOGLE_CLIENT_ID,
-    scope: 'https://www.googleapis.com/auth/drive email profile',
+    scope: 'https://www.googleapis.com/auth/drive.file email profile',
     callback: handleTokenResponse,
   });
 });
@@ -479,30 +477,35 @@ async function submitCampaign() {
   const type    = campTypeEl.value;
 
   try {
-    // Step 1 of 3: copy template into the customer's Drive using their token
-    setStatus('Step 1 of 3: Copying your spreadsheet…', '');
-    const copyRes = await fetch(
-      'https://www.googleapis.com/drive/v3/files/' + TEMPLATE_ID + '/copy',
+    // Step 1 of 3: create a fresh spreadsheet in the customer's Drive.
+    // Uses the Sheets API with the customer's drive.file token — the file
+    // is created by this app so drive.file scope is sufficient.
+    // ensureSetup_ in Code.gs handles all tab creation and headers on first use.
+    setStatus('Step 1 of 3: Creating your spreadsheet\u2026', '');
+    const createRes = await fetch(
+      'https://sheets.googleapis.com/v4/spreadsheets',
       {
         method:  'POST',
         headers: {
           Authorization:  'Bearer ' + driveToken,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name: orgName + ' - Linkway' }),
+        body: JSON.stringify({
+          properties: { title: orgName + ' - Linkway' },
+        }),
       }
     );
-    const copyData = await copyRes.json();
-    if (!copyData.id) {
-      const reason = (copyData.error && copyData.error.message) ? copyData.error.message : ('HTTP ' + copyRes.status);
+    const createData = await createRes.json();
+    if (!createData.spreadsheetId) {
+      const reason = (createData.error && createData.error.message)
+        ? createData.error.message : ('HTTP ' + createRes.status);
       throw new Error('Could not create your spreadsheet (' + reason + '). Please try again.');
     }
-    const sheetId = copyData.id;
+    const sheetId = createData.spreadsheetId;
 
-    // Step 2 of 3: share the new sheet with the Linkway service account as Editor
-    // Uses the same Drive token — drive scope covers permissions on files
-    // created by this token.
-    setStatus('Step 2 of 3: Connecting Linkway to your spreadsheet…', '');
+    // Step 2 of 3: share the new sheet with the Linkway service account as Editor.
+    // drive.file scope covers permissions on files created by this token.
+    setStatus('Step 2 of 3: Connecting Linkway to your spreadsheet\u2026', '');
     const permRes = await fetch(
       'https://www.googleapis.com/drive/v3/files/' + sheetId + '/permissions',
       {
@@ -520,7 +523,8 @@ async function submitCampaign() {
     );
     if (!permRes.ok) {
       const permData = await permRes.json().catch(() => ({}));
-      const reason = (permData.error && permData.error.message) ? permData.error.message : ('HTTP ' + permRes.status);
+      const reason = (permData.error && permData.error.message)
+        ? permData.error.message : ('HTTP ' + permRes.status);
       throw new Error('Could not share your spreadsheet with Linkway (' + reason + '). Please try again.');
     }
 
