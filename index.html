@@ -724,6 +724,29 @@ const CAMPAIGN_TYPE_LABELS = {
   fundraising: 'Fundraising Canvass',
 };
 
+// Default concern chips shown on the Listen step, keyed by campaign type.
+// Organizers can override these in Campaign Setup (stored in cfg.concernChips).
+const CONCERN_CHIPS_DEFAULT = {
+  primary:     ['Economy & Jobs', 'Healthcare', 'Education', 'Public Safety',
+                'Housing & Cost of Living', 'Environment & Climate',
+                'Immigration', 'Infrastructure & Roads', 'Taxes'],
+  general:     ['Economy & Jobs', 'Healthcare', 'Education', 'Public Safety',
+                'Housing & Cost of Living', 'Environment & Climate',
+                'Immigration', 'Infrastructure & Roads', 'Taxes'],
+  ballot:      ['Cost & Taxes', 'Public Safety', 'Local Schools', 'Environment',
+                'Property Values', 'Traffic & Roads', 'Local Jobs',
+                'Neighborhood Character'],
+  advocacy:    ['Personal Story', 'Affordability', 'Fairness & Equity',
+                'Health Impact', 'Environment', 'Jobs & Economy',
+                'Government Accountability'],
+  nonprofit:   ['Giving Back to Community', 'Personal Connection to Cause',
+                'Skill Building', 'Meet New People',
+                'Flexible Schedule', 'First-Time Volunteer'],
+  fundraising: ['Supports Our Mission', 'Wants More Info',
+                'Already Giving Elsewhere', 'Tight Budget Right Now',
+                'Prefers to Volunteer', 'Tax Deductibility'],
+};
+
 // Fields shown in setup by campaign type.
 // 'universal' = always shown. Other keys = only for that type.
 const FIELD_GROUPS = {
@@ -779,6 +802,9 @@ const cfg = {
   campaignId: '',
   // Organizer-authored script (single pasted blob, parsed into slots)
   rawScript: '',
+  // Custom concern chips for the Listen step.
+  // Empty array = use CONCERN_CHIPS_DEFAULT for the campaign type.
+  concernChips: [],
 };
 
 async function loadCfg() {
@@ -1284,6 +1310,19 @@ const SCREENS = {
         <div class="body" id="scriptPreviewBody"></div>
       </details>
 
+      <!-- ── Concern chips (only shown when ##LISTEN is present in the script) ── -->
+      <div id="chipsSection" hidden>
+        <div class="section">
+          <div class="section-head">Step 3 concern chips</div>
+          <div class="section-sub">Your script includes a ##LISTEN section, so volunteers will see this quick-tap menu. Pre-filled with sensible defaults for your campaign type — edit any label, remove ones that don't fit, or add your own.</div>
+        </div>
+        <div id="chipsList" style="display:flex;flex-direction:column;gap:8px"></div>
+        <div class="choices" style="margin-top:10px">
+          <button class="choice soft" type="button" id="addChipBtn"><span class="ic">+</span><span>Add a chip</span></button>
+          <button class="choice soft" type="button" id="resetChipsBtn"><span class="ic">\u21ba</span><span>Reset to defaults for this type</span></button>
+        </div>
+      </div>
+
       <!-- ── App settings ──
            Only shown when no endpoint is baked into this file AND we're
            not running inside Apps Script (where it's auto-detected).
@@ -1443,7 +1482,53 @@ const SCREENS = {
     renderEarlyDates();
     updateEarlyPreview();
 
-    // Re-show/hide type-specific groups when type changes
+    // ── Concern chip editor ───────────────────────────────────
+    // Renders the editable chip rows in #chipsList.
+    // seed = array of label strings to populate from.
+    function renderChipRows(seed) {
+      const listEl = node.querySelector('#chipsList');
+      listEl.innerHTML = '';
+      seed.forEach((label, i) => addChipRow(label));
+    }
+
+    function addChipRow(label) {
+      const listEl = node.querySelector('#chipsList');
+      const row = el(`<div style="display:flex;gap:8px;align-items:center">
+        <input class="chip-input"
+          value="${escHtml(label)}"
+          placeholder="Chip label\u2026"
+          style="flex:1;border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;font:inherit;font-size:16px;background:var(--surface);color:var(--ink)">
+        <button type="button" class="miniBtn danger" style="flex:none;padding:10px 14px">\u00d7</button>
+      </div>`);
+      row.querySelector('button').onclick = () => row.remove();
+      listEl.appendChild(row);
+    }
+
+    // Seed: use saved custom chips if present, else defaults for current type.
+    const savedChips = Array.isArray(cfg.concernChips) && cfg.concernChips.length
+      ? cfg.concernChips
+      : (CONCERN_CHIPS_DEFAULT[cfg.campaignType] || CONCERN_CHIPS_DEFAULT['primary']);
+    renderChipRows(savedChips);
+
+    node.querySelector('#addChipBtn').onclick = () => {
+      addChipRow('');
+      // Focus the new input
+      const inputs = node.querySelectorAll('.chip-input');
+      inputs[inputs.length - 1].focus();
+    };
+
+    node.querySelector('#resetChipsBtn').onclick = () => {
+      const type = node.querySelector('#cs-type').value;
+      const defaults = CONCERN_CHIPS_DEFAULT[type] || CONCERN_CHIPS_DEFAULT['primary'];
+      if (confirm('Reset chips to the ' + (CAMPAIGN_TYPE_LABELS[type] || 'default') + ' defaults? Your current labels will be replaced.')) {
+        renderChipRows(defaults);
+      }
+    };
+
+    // Re-show/hide type-specific groups when type changes.
+    // Also refresh chips to new type defaults, but only if current
+    // chip values still match the previous type's defaults exactly
+    // (meaning the organizer hasn't customized them yet).
     node.querySelector('#cs-type').onchange = function() {
       const v = this.value;
       node.querySelector('#g-election').style.display   = ['primary','general'].includes(v) ? '' : 'none';
@@ -1451,6 +1536,16 @@ const SCREENS = {
       node.querySelector('#g-advocacy').style.display   = v === 'advocacy'    ? '' : 'none';
       node.querySelector('#g-nonprofit').style.display  = v === 'nonprofit'   ? '' : 'none';
       node.querySelector('#g-fundraising').style.display= v === 'fundraising' ? '' : 'none';
+
+      // Auto-refresh chips when type changes if they haven't been edited
+      const currentLabels = Array.from(node.querySelectorAll('.chip-input')).map(i => i.value.trim());
+      const isUnedited = Object.values(CONCERN_CHIPS_DEFAULT).some(defaults =>
+        defaults.length === currentLabels.length &&
+        defaults.every((d, i) => d === currentLabels[i])
+      );
+      if (isUnedited) {
+        renderChipRows(CONCERN_CHIPS_DEFAULT[v] || CONCERN_CHIPS_DEFAULT['primary']);
+      }
     };
 
     // Boolean toggle segments
@@ -1515,6 +1610,8 @@ const SCREENS = {
       cfg.earlyAction       = [cfg.earlyActionLabel, earlyDates.map(formatIsoDate).join(' & ')].filter(Boolean).join(', ');
       if (!isAppsScript && !HAS_BAKED_ENDPOINT) cfg.endpoint = node.querySelector('#cs-ep')?.value.trim() || cfg.endpoint;
       cfg.rawScript         = scriptValue;
+      cfg.concernChips      = Array.from(node.querySelectorAll('.chip-input'))
+                                .map(i => i.value.trim()).filter(Boolean);
 
 
       // Type-specific
@@ -1678,9 +1775,22 @@ const SCREENS = {
       previewBody.innerHTML = html;
     }
     renderScriptPreview();
+
+    // Show/hide the chips section based on whether ##LISTEN is in the script.
+    // Chips are only relevant when the listen step is active.
+    function updateChipsVisibility() {
+      const parsed   = parseOrganizerScript(scriptTextarea.value);
+      const hasListen = !!(parsed.slots.listen && parsed.slots.listen.trim());
+      node.querySelector('#chipsSection').hidden = !hasListen;
+    }
+    updateChipsVisibility();
+
     scriptTextarea.addEventListener('input', () => {
       clearTimeout(previewDebounce);
-      previewDebounce = setTimeout(renderScriptPreview, 250);
+      previewDebounce = setTimeout(() => {
+        renderScriptPreview();
+        updateChipsVisibility();
+      }, 250);
     });
   },
 
@@ -1824,31 +1934,89 @@ const SCREENS = {
   listen() {
     const fallback = `<p>"Before I go on, what's the biggest thing on your mind right now?"</p>`;
 
+    // Use the organizer's saved custom chips if present,
+    // otherwise fall back to the built-in defaults for this campaign type.
+    const chips = (Array.isArray(cfg.concernChips) && cfg.concernChips.length)
+      ? cfg.concernChips
+      : (CONCERN_CHIPS_DEFAULT[cfg.campaignType] || CONCERN_CHIPS_DEFAULT['primary']);
+
     const node = el(`<div>
       ${rail(2)}
       ${backButtonHtml()}
-      <div class="eyebrow">Step 3 · What matters to them</div>
+      <div class="eyebrow">Step 3 \u00b7 What matters to them</div>
       <div class="say" style="margin-top:8px">
         <div class="tag">Ask, then listen</div>
         ${slotHtml('listen', {}, fallback)}
       </div>
-      <div class="field" style="margin-top:14px">
-        <label for="concern-input">What they said (optional, for your notes)</label>
-        <input id="concern-input" placeholder="e.g. their top concern" value="${escHtml(C.concern || '')}">
+
+      <div style="margin-top:18px">
+        <div style="font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--faint);margin-bottom:10px">Tap their top concern to continue</div>
+        <div class="chips" id="concernChips">
+          ${chips.map(c => `<button class="chip" data-concern="${escHtml(c)}">${escHtml(c)}</button>`).join('')}
+          <button class="chip" id="otherChip" style="grid-column:1/-1;justify-content:center;background:var(--surface);border-color:var(--line);color:var(--ink-soft);">\u270f\ufe0f Other \u2014 type it in</button>
+        </div>
+
+        <div id="otherWrap" style="display:none;margin-top:12px;gap:8px;align-items:center">
+          <input id="concern-input" placeholder="Type their concern\u2026"
+            style="flex:1;border:1.5px solid var(--blue);border-radius:12px;padding:13px;font:inherit;font-size:16px;background:var(--surface);outline:none">
+          <button id="otherDoneBtn"
+            style="flex:none;min-height:50px;padding:0 20px;border-radius:12px;background:var(--blue);color:#fff;font:inherit;font-size:15px;font-weight:800;border:none;cursor:pointer">
+            Done
+          </button>
+        </div>
       </div>
-      <div class="choices" style="margin-top:14px" id="listenChoices"></div>
+
+      <div class="choices" style="margin-top:14px">
+        <button class="choice soft" id="skipConcernBtn"><span class="ic">\u2192</span><span>Skip \u2014 no concern noted</span></button>
+      </div>
     </div>`);
 
-    const choices = [
-      { label: 'Continue', ic: '→', cls: 'go', fn: () => {
-          const input = node.querySelector('#concern-input');
-          C.concern = input ? input.value.trim() : C.concern;
-          goToNextOptionalStep('listen');
-        }
-      },
-    ];
-    node.querySelector('#listenChoices').innerHTML = choiceList(choices);
-    wireChoices(node.querySelector('#listenChoices'), choices);
+    // Tap a topic chip: set concern and immediately advance
+    node.querySelectorAll('#concernChips .chip:not(#otherChip)').forEach(btn => {
+      btn.onclick = () => {
+        C.concern = btn.dataset.concern;
+        goToNextOptionalStep('listen');
+      };
+    });
+
+    // "Other…" chip: slide in the text input
+    node.querySelector('#otherChip').onclick = () => {
+      const wrap = node.querySelector('#otherWrap');
+      wrap.style.display = 'flex';
+      node.querySelector('#concern-input').focus();
+    };
+
+    // Done button in text input: capture and advance
+    node.querySelector('#otherDoneBtn').onclick = () => {
+      C.concern = node.querySelector('#concern-input').value.trim();
+      goToNextOptionalStep('listen');
+    };
+
+    // Also advance on Enter inside the text input
+    node.querySelector('#concern-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        C.concern = node.querySelector('#concern-input').value.trim();
+        goToNextOptionalStep('listen');
+      }
+    });
+
+    // If the volunteer already captured a concern (e.g. came back via Back),
+    // pre-show the Other input with the saved value so they can edit it.
+    if (C.concern) {
+      const matchedChip = node.querySelector(`[data-concern="${CSS.escape(C.concern)}"]`);
+      if (!matchedChip) {
+        const wrap = node.querySelector('#otherWrap');
+        wrap.style.display = 'flex';
+        node.querySelector('#concern-input').value = C.concern;
+      }
+    }
+
+    // Skip: advance without logging a concern
+    node.querySelector('#skipConcernBtn').onclick = () => {
+      C.concern = '';
+      goToNextOptionalStep('listen');
+    };
 
     render(node);
     updateWhoBar();
