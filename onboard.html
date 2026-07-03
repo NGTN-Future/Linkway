@@ -366,9 +366,8 @@ const formWrap     = document.getElementById('formWrap');
 const successWrap  = document.getElementById('successWrap');
 
 // ── Google OAuth token client ──────────────────────────────────
-// Requesting drive.file scope so the customer's token can create a
-// new spreadsheet in their own Drive. drive.file covers files created
-// by this app — no broader Drive access is needed or requested.
+// Initialized once GIS loads. Requesting drive.file scope so the
+// customer's token can copy the template into their own Drive.
 let tokenClient;
 window.addEventListener('load', () => {
   if (!window.google) return;
@@ -477,13 +476,14 @@ async function submitCampaign() {
   const type    = campTypeEl.value;
 
   try {
-    // Step 1 of 3: create a fresh spreadsheet in the customer's Drive.
-    // Uses the Sheets API with the customer's drive.file token — the file
-    // is created by this app so drive.file scope is sufficient.
-    // ensureSetup_ in Code.gs handles all tab creation and headers on first use.
+    // Step 1 of 3: create a fresh Google Sheets file in the customer's Drive.
+    // Uses the Drive API with drive.file scope. Creating a file via the Drive
+    // API with the Sheets mimeType produces a proper Google Sheets spreadsheet.
+    // Drive API is used here (not the Sheets API) because Drive API is already
+    // proven enabled and drive.file scope is explicitly designed for this.
     setStatus('Step 1 of 3: Creating your spreadsheet\u2026', '');
     const createRes = await fetch(
-      'https://sheets.googleapis.com/v4/spreadsheets',
+      'https://www.googleapis.com/drive/v3/files',
       {
         method:  'POST',
         headers: {
@@ -491,17 +491,18 @@ async function submitCampaign() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          properties: { title: orgName + ' - Linkway' },
+          name:     orgName + ' - Linkway',
+          mimeType: 'application/vnd.google-apps.spreadsheet',
         }),
       }
     );
     const createData = await createRes.json();
-    if (!createData.spreadsheetId) {
+    if (!createData.id) {
       const reason = (createData.error && createData.error.message)
         ? createData.error.message : ('HTTP ' + createRes.status);
       throw new Error('Could not create your spreadsheet (' + reason + '). Please try again.');
     }
-    const sheetId = createData.spreadsheetId;
+    const sheetId = createData.id;
 
     // Step 2 of 3: share the new sheet with the Linkway service account as Editor.
     // drive.file scope covers permissions on files created by this token.
@@ -525,7 +526,7 @@ async function submitCampaign() {
       const permData = await permRes.json().catch(() => ({}));
       const reason = (permData.error && permData.error.message)
         ? permData.error.message : ('HTTP ' + permRes.status);
-      throw new Error('Could not share your spreadsheet with Linkway (' + reason + '). Please try again.');
+      throw new Error('Could not connect Linkway to your spreadsheet (' + reason + '). Please try again.');
     }
 
     // Step 3 of 3: register the campaign with the backend
