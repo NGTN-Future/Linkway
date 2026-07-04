@@ -847,7 +847,17 @@ async function signOut() {
   }
   await clearAuth();
   if (window.google) google.accounts.id.disableAutoSelect(); // prevent GIS from auto-signing back in
-  location.reload();
+  // Reload with ?cid= preserved so the redirect guard at the top of
+  // index.html doesn't mistake this for a bare root visit and send
+  // the volunteer to onboard.html instead of the sign-in screen.
+  // boot() strips ?cid= from the URL via history.replaceState() after
+  // config loads, so location.reload() would reload a bare URL and
+  // trigger the redirect. Using cfg.campaignId puts it back.
+  if (cfg.campaignId) {
+    window.location.replace(window.location.pathname + '?cid=' + encodeURIComponent(cfg.campaignId));
+  } else {
+    location.reload(); // no campaign id stored — reload bare (organizer-only device)
+  }
 }
 
 // Warn before leaving the page mid-setup so the admin doesn't accidentally
