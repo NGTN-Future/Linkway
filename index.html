@@ -35,13 +35,27 @@
 <script>
   (function() {
     var p = new URLSearchParams(window.location.search);
-    // If none of the four campaign URL params are present, this is a
-    // bare root visit — send to onboard rather than the canvassing tool.
-    if (!p.has('cid') && !p.has('d') && !p.has('ep') && !p.has('cfg')) {
-      window.location.replace('onboard.html');
-    }
-    // If any param is present, fall through silently and let boot()
-    // handle the full resolution order as normal.
+    // If any of the four campaign URL params are present, fall through
+    // silently and let boot() handle the full resolution order as normal.
+    if (p.has('cid') || p.has('d') || p.has('ep') || p.has('cfg')) return;
+
+    // No URL params present. Before redirecting, check whether this device
+    // already has a stored campaign config. boot() strips ?cid= from the URL
+    // via history.replaceState() after the first successful load, so a page
+    // refresh (Ctrl+R) would otherwise look identical to a bare root visit
+    // and incorrectly redirect a returning volunteer to onboard.html.
+    // Storage key mirrors the 'canvass:' prefix used by the store helpers below.
+    try {
+      var stored = localStorage.getItem('canvass:cfg');
+      if (stored) {
+        var parsed = JSON.parse(stored);
+        if (parsed && parsed.campaignId) return; // known campaign — let boot() take over
+      }
+    } catch(e) { /* localStorage unavailable or JSON malformed — fall through to redirect */ }
+
+    // No URL params and no stored campaign: this is a genuine bare root visit.
+    // Send to onboard so new organizers can self-serve without hitting the sign-in screen.
+    window.location.replace('onboard.html');
   })();
 </script>
 
