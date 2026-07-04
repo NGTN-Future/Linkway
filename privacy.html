@@ -3,30 +3,45 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Page title shown in browser tabs and Google OAuth verification review -->
 <title>Privacy Policy — Linkway</title>
+<!-- Meta description for search engines and Google OAuth consent screen review.
+     Keep this accurate — it may be read by Google's API verification team. -->
 <meta name="description" content="Linkway privacy policy. Learn how Linkway collects, uses, and protects your data.">
+
 <style>
-  /* ── Design tokens (matches index.html / onboard.html) ─────── */
+  /* ── Design tokens ───────────────────────────────────────────
+     Kept in sync with index.html, landing.html, and onboard.html
+     so this page matches the rest of the app visually.
+     If you change a token in index.html, update it here too.
+  ──────────────────────────────────────────────────────────── */
   :root {
-    --ink:        #16243B;
-    --ink-soft:   #48586F;
-    --faint:      #7C8AA0;
-    --line:       #E1E7F0;
-    --bg:         #EAEEF4;
-    --surface:    #FFFFFF;
-    --blue:       #2456C6;
-    --blue-d:     #1A409A;
-    --blue-tint:  #EAF0FC;
-    --r:          16px;
+    --ink:        #16243B;    /* main body text (dark navy) */
+    --ink-soft:   #48586F;    /* secondary text (medium navy-gray) */
+    --faint:      #7C8AA0;    /* muted text — dates, footer, captions */
+    --line:       #E1E7F0;    /* borders and dividers (light blue-gray) */
+    --bg:         #EAEEF4;    /* page background (very light blue-gray) */
+    --surface:    #FFFFFF;    /* card and nav background (white) */
+    --blue:       #2456C6;    /* primary brand blue */
+    --blue-d:     #1A409A;    /* darker blue (hover states) */
+    --blue-tint:  #EAF0FC;    /* very light blue (not used here but kept for token parity) */
+    --r:          16px;       /* standard border radius (not used directly here, kept for parity) */
     --shadow:     0 1px 2px rgba(20,36,59,.06), 0 8px 24px rgba(20,36,59,.08);
     font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
                  Helvetica, Arial, sans-serif;
   }
 
+  /* Box-sizing reset so padding doesn't push elements outside their containers */
   *, *::before, *::after { box-sizing: border-box; }
   html, body { margin: 0; background: var(--bg); color: var(--ink); line-height: 1.7; }
   a { color: var(--blue); }
 
+  /* ── Navigation bar ─────────────────────────────────────────
+     Simpler than the landing page nav: logo on the left, "Back to
+     home" text link on the right. No sticky positioning needed here
+     because the policy text doesn't scroll far enough to warrant it.
+  ──────────────────────────────────────────────────────────── */
   nav {
     background: var(--surface);
     border-bottom: 1px solid var(--line);
@@ -35,6 +50,7 @@
     align-items: center;
     justify-content: space-between;
   }
+  /* "Linkway" wordmark — "way" colored blue via <span> */
   .nav-brand {
     font-size: 20px;
     font-weight: 900;
@@ -43,6 +59,7 @@
     text-decoration: none;
   }
   .nav-brand span { color: var(--blue); }
+  /* Muted "Back to home" text link — low visual weight, not a CTA */
   .nav-back {
     font-size: 14px;
     color: var(--faint);
@@ -51,22 +68,34 @@
   }
   .nav-back:hover { color: var(--ink-soft); }
 
+  /* ── Page wrapper ───────────────────────────────────────────
+     Narrower than the landing page grid (700px vs 860px) since
+     policy text is single-column and benefits from shorter line
+     lengths for readability.
+  ──────────────────────────────────────────────────────────── */
   .page {
     max-width: 700px;
     margin: 0 auto;
-    padding: 48px 24px 80px;
+    padding: 48px 24px 80px;   /* generous bottom padding so content doesn't feel cramped above the footer */
   }
 
+  /* ── Policy card ────────────────────────────────────────────
+     All the policy content lives in a single white card with the
+     standard Linkway shadow, matching the card style used on the
+     sign-in screen and setup forms.
+  ──────────────────────────────────────────────────────────── */
   .card {
     background: var(--surface);
     border-radius: 20px;
     box-shadow: var(--shadow);
-    padding: 44px 44px;
+    padding: 44px;     /* generous desktop padding so text doesn't hug the card edges */
   }
+  /* Tighter padding on phones — 44px would eat most of the screen width */
   @media (max-width: 600px) {
     .card { padding: 28px 22px; }
   }
 
+  /* Small uppercase "Effective date" label above the title */
   .policy-date {
     font-size: 13px;
     font-weight: 700;
@@ -75,6 +104,8 @@
     color: var(--faint);
     margin-bottom: 8px;
   }
+
+  /* Main page title */
   h1 {
     font-size: 28px;
     font-weight: 900;
@@ -83,6 +114,10 @@
     color: var(--ink);
     margin: 0 0 10px;
   }
+
+  /* Intro paragraph: larger than body text and separated from the
+     section content by a bottom border to create a clear visual
+     "above the fold" statement. */
   .intro {
     font-size: 16px;
     color: var(--ink-soft);
@@ -90,12 +125,20 @@
     padding-bottom: 28px;
     margin-bottom: 32px;
   }
+
+  /* Section headings (numbered sections like "1. What Linkway does") */
   h2 {
     font-size: 17px;
     font-weight: 800;
     color: var(--ink);
     margin: 32px 0 10px;
   }
+
+  /* Sub-section headings (2a, 2b, etc.) are styled differently from
+     full h2s: same font-size as body, heavier weight, slightly less
+     top margin. Inline styles in the HTML achieve this without adding
+     extra class names. */
+
   p, li {
     font-size: 15px;
     color: var(--ink-soft);
@@ -106,8 +149,13 @@
     margin: 8px 0 12px;
   }
   li { margin-bottom: 6px; }
+
+  /* <strong> inside body text appears in the darker ink color so it
+     stands out against the softer --ink-soft body text. */
   strong { color: var(--ink); }
 
+  /* Contact box: a light gray inset for the email address block,
+     visually separated from the surrounding paragraph text. */
   .contact-box {
     background: var(--bg);
     border-radius: 12px;
@@ -116,6 +164,8 @@
   }
   .contact-box p { margin: 0; }
 
+  /* Footer: centered, small, muted. Links inherit the faint color so
+     they don't compete with the policy content above. */
   footer {
     text-align: center;
     padding: 20px 24px 40px;
@@ -127,75 +177,148 @@
 </head>
 <body>
 
+<!-- Navigation bar: logo links to the landing page; "Back to home" is a
+     secondary text link for users who arrived directly at this URL.
+     EDIT: Update href values if the landing page URL changes. -->
 <nav>
   <a href="landing.html" class="nav-brand">Link<span>way</span></a>
   <a href="landing.html" class="nav-back">Back to home</a>
 </nav>
 
+<!-- All policy content is inside a single centered .card -->
 <div class="page">
   <div class="card">
 
+    <!-- Effective date: update this when the policy is materially revised.
+         Required by Google OAuth verification for any change to data use. -->
     <p class="policy-date">Effective date: January 1, 2025</p>
     <h1>Privacy Policy</h1>
+
+    <!-- Intro paragraph: appears above the section divider line.
+         EDIT: Update if the core product description changes. -->
     <p class="intro">This Privacy Policy describes how Linkway ("we," "us," or "our") collects, uses, and handles information when you use our canvassing and volunteer coordination service. We've written it to be plain and specific, not generic boilerplate.</p>
 
+    <!-- ── Section 1: What Linkway does ─────────────────────────
+         A plain-language product description. Establishes context
+         for all the data practices described below. Required by
+         Google's OAuth verification review.
+    ──────────────────────────────────────────────────────────── -->
     <h2>1. What Linkway does</h2>
-    <p>Linkway is a canvassing and volunteer coordination tool for small political campaigns and nonprofits. Campaign organizers create a Linkway account, and volunteers use a shared link to log canvass contacts and voter interactions from their phones or computers.</p>
+    <p>Linkway is a canvassing and volunteer coordination tool for small political campaigns and nonprofits. Campaign organizers create a Linkway account and configure their campaign. Volunteers use a shared link to log canvass contacts and voter interactions from their phones or computers. All canvass data is stored in a Google Sheet that belongs to the organizer's own Google Drive.</p>
 
+    <!-- ── Section 2: Information we collect ────────────────────
+         Split into sub-sections (2a–2d) to clearly separate the
+         different data flows. This structure is specifically
+         recommended by Google for OAuth verification submissions.
+    ──────────────────────────────────────────────────────────── -->
     <h2>2. Information we collect</h2>
 
+    <!-- 2a: Account and campaign setup data stored in Linkway's registry -->
     <h2 style="font-size:15px; font-weight:700; margin-top:20px;">2a. Account and campaign setup</h2>
-    <p>When you create a Linkway campaign, we collect:</p>
+    <p>When you create a Linkway campaign, we collect and store in our campaign registry:</p>
     <ul>
+      <!-- These five fields match the five columns written to the registry Sheet
+           in createCampaign_() in Code.gs: slug, sheetId, adminEmail, status, type -->
       <li>Your email address (via Google Sign-In)</li>
       <li>Your organization or campaign name</li>
-      <li>Your chosen campaign slug (a short identifier used in your campaign's URL)</li>
-      <li>Campaign type (political campaign, nonprofit, or other)</li>
+      <li>Your chosen campaign slug (a short identifier used in your campaign's URL, e.g. <em>smith2026</em>)</li>
+      <li>Campaign type (e.g. electoral, ballot measure, nonprofit)</li>
+      <li>The file ID of the Google Sheet created in your Drive during setup</li>
     </ul>
-    <p>We use this information to create your campaign entry in our registry and to send you a welcome email with your campaign's volunteer sign-in link.</p>
+    <p>We use this information to route your volunteers' canvass submissions to the correct spreadsheet and to send you a welcome email with your campaign's volunteer sign-in link.</p>
 
-    <h2 style="font-size:15px; font-weight:700; margin-top:20px;">2b. Google Drive access (organizer)</h2>
-    <p>During campaign setup, we request permission to create a file in your Google Drive (<strong>drive.file</strong> scope). We use this permission only to copy the Linkway campaign spreadsheet template into your own Google Drive. We do not access any other files in your Drive. Once the spreadsheet is created, all canvass data goes directly into that file — it belongs to your Google account, not ours.</p>
+    <!-- 2b: The two Google OAuth scopes requested during onboarding.
+         IMPORTANT: This section must accurately reflect the scopes in onboard.html.
+         Current scopes: 'spreadsheets' (to create the Sheet) and 'drive.file'
+         (to share it with the Linkway bot service account).
+         Google's verification team checks that the scope descriptions here
+         match the actual code behavior. Do not describe scopes we don't use,
+         and do not use scopes we don't describe here. -->
+    <h2 style="font-size:15px; font-weight:700; margin-top:20px;">2b. Google Drive and Sheets access (organizer)</h2>
+    <p>During campaign setup, your browser requests two Google permissions on your behalf:</p>
+    <ul>
+      <li><strong>Google Sheets</strong> (<code>spreadsheets</code> scope): used to create a new, blank campaign spreadsheet directly in your Google Drive. This action is performed entirely within your browser using your own Google identity — Linkway's servers never see your Drive credentials and do not perform this step on your behalf.</li>
+      <li><strong>Google Drive file access</strong> (<code>drive.file</code> scope): used only to share the spreadsheet just created with Linkway's service account (a read/write bot), so that canvass data submitted by volunteers can be written to your Sheet. This scope can only interact with the specific file created during your setup session — it cannot access any other files in your Drive.</li>
+    </ul>
+    <p>Once setup is complete, your campaign spreadsheet belongs entirely to your Google account. You can view, share, export, or delete it at any time from Google Drive without involving Linkway.</p>
 
+    <!-- 2c: Volunteer sign-in — no data stored on Linkway servers -->
     <h2 style="font-size:15px; font-weight:700; margin-top:20px;">2c. Volunteer sign-in</h2>
-    <p>When a volunteer signs in with Google to use the canvassing tool, we verify their email address against the Approved Volunteers list stored in your campaign's spreadsheet. We do not store volunteer email addresses on our own servers; the list lives in your Google Sheet.</p>
+    <p>When a volunteer signs in with Google to use the canvassing tool, we verify their email address against the Approved Volunteers list stored in your campaign's Google Sheet. We do not store volunteer email addresses on our own servers — the approved list lives entirely in your Google Sheet, which you control.</p>
 
+    <!-- 2d: Canvass activity — all data goes to the customer's own Sheet -->
     <h2 style="font-size:15px; font-weight:700; margin-top:20px;">2d. Canvass activity</h2>
-    <p>All canvass logs (doors knocked, voter contacts, support ratings, notes) are written directly to your campaign's Google Sheet. Linkway does not retain a separate copy of this data. Your campaign spreadsheet is the single source of truth, and it lives in your Google Drive.</p>
+    <p>All canvass logs — doors knocked, voter contacts, support ratings, notes — are written directly to your campaign's Google Sheet via our service account. Linkway does not retain a separate copy of this data on our servers. Your campaign spreadsheet is the single source of truth, and it lives in your Google Drive.</p>
 
+    <!-- ── Section 3: How we use information ────────────────────
+         Required enumeration for Google's OAuth review. Must be
+         exhaustive: if we use data for a purpose not listed here,
+         it violates the Limited Use policy.
+    ──────────────────────────────────────────────────────────── -->
     <h2>3. How we use your information</h2>
     <p>We use the information we collect to:</p>
     <ul>
-      <li>Create and identify your campaign account</li>
-      <li>Route your volunteers' canvass submissions to your campaign's spreadsheet</li>
-      <li>Send you a one-time welcome email with your campaign's volunteer link</li>
+      <li>Create and identify your campaign in our registry</li>
+      <li>Route your volunteers' canvass submissions to your campaign's Google Sheet</li>
+      <li>Send you a one-time welcome email from our Gmail account containing your campaign's volunteer link, a link to your spreadsheet, and getting-started instructions</li>
       <li>Respond to support requests if you contact us</li>
     </ul>
     <p>We do not use your information for advertising, sell it to third parties, or share it with anyone except as described in this policy.</p>
 
+    <!-- ── Section 4: Data storage and security ─────────────────
+         Distinguishes between what lives on Linkway's servers (the
+         registry) vs. what lives on the customer's own Drive (the
+         Sheet). This separation is the core of the data ownership
+         model and is important for Google's review.
+    ──────────────────────────────────────────────────────────── -->
     <h2>4. Data storage and security</h2>
-    <p>Linkway maintains a campaign registry (a Google Sheet we control) that stores your campaign slug, organization name, campaign type, email address, and the ID of your campaign's Google Sheet. This registry is used solely to route requests to the correct customer spreadsheet.</p>
-    <p>All canvass data and volunteer lists live in your own Google Drive account, protected by Google's security infrastructure. We access your Sheet only through a service account with write access limited to the file we created during setup.</p>
+    <p>Linkway maintains a campaign registry (a Google Sheet controlled by Linkway) that stores, for each campaign: the campaign slug, the organizer's email address, the Google Sheet file ID, the campaign type, and an active/inactive status. This registry is used solely to route incoming requests to the correct customer spreadsheet. Linkway does not store organization names, volunteer lists, or canvass records in this registry.</p>
+    <p>All canvass data, volunteer lists, campaign configuration, and organization details live in your own Google Drive account, protected by Google's infrastructure. Linkway accesses your Sheet only through a service account (<strong>linkway-bot@linkway-501103.iam.gserviceaccount.com</strong>) granted Editor access to your specific file during setup. The service account cannot access any other files in your Drive.</p>
 
+    <!-- ── Section 5: Google API services ───────────────────────
+         Required verbatim statement for Google API Services User
+         Data Policy compliance. Do not remove or abbreviate the
+         Limited Use language. The four bullet points below must
+         appear in any app using Google APIs.
+         EDIT: Update scope descriptions if onboard.html scopes change.
+    ──────────────────────────────────────────────────────────── -->
     <h2>5. Google API services</h2>
-    <p>Linkway uses Google APIs, including Google Sign-In for authentication and the Google Drive API for campaign setup. Our use of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">Google API Services User Data Policy</a>, including the Limited Use requirements.</p>
+    <p>Linkway uses Google APIs, including Google Sign-In for authentication and the Google Sheets and Drive APIs for campaign setup. Our use of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">Google API Services User Data Policy</a>, including the Limited Use requirements.</p>
     <p>Specifically:</p>
     <ul>
-      <li>We use the <strong>drive.file</strong> scope only to create the campaign spreadsheet template in the organizer's Drive. We do not read, modify, or access any other Drive files.</li>
-      <li>We do not transfer Google user data to third parties except as necessary to provide the Linkway service.</li>
-      <li>We do not use Google user data for advertising purposes.</li>
-      <li>We do not allow humans to read user data unless you have explicitly requested support from us and granted us access, or it is required for security or legal compliance.</li>
+      <!-- These four bullets are the required Limited Use declarations.
+           They must match the actual behavior in onboard.html and Code.gs. -->
+      <li>We use the <strong>Google Sheets</strong> (<code>spreadsheets</code>) scope only to create the campaign spreadsheet in the organizer's Google Drive during setup. We do not read or modify any pre-existing Sheets.</li>
+      <li>We use the <strong>Google Drive file access</strong> (<code>drive.file</code>) scope only to share the newly created spreadsheet with our service account. We do not access any other files in your Drive.</li>
+      <li>We do not transfer Google user data to third parties except as necessary to provide the Linkway service (writing canvass data to your own Google Sheet via Google's APIs).</li>
+      <li>We do not use Google user data for advertising purposes, and we do not allow humans to read user data unless you have explicitly requested support from us and granted access, or it is required for security or legal compliance.</li>
     </ul>
 
+    <!-- ── Section 6: Data retention and deletion ───────────────
+         EDIT: Update the contact email if ngtnleadership@gmail.com changes.
+    ──────────────────────────────────────────────────────────── -->
     <h2>6. Data retention and deletion</h2>
-    <p>Your campaign registry entry (slug, org name, email, Sheet ID) is retained while your campaign is active. If you want your campaign removed from our registry and wish to delete your data, email us at the address below. Your campaign spreadsheet in Google Drive is yours to delete at any time — deleting it does not require contacting us.</p>
+    <p>Your campaign registry entry (slug, email address, Sheet file ID, campaign type, and status) is retained while your campaign is active. If you want your campaign removed from our registry, email us at the address in Section 9 and we will delete your entry. Your campaign spreadsheet in Google Drive is yours to delete at any time directly from Google Drive — no need to contact us.</p>
 
+    <!-- ── Section 7: Children's privacy ─────────────────────────
+         Required boilerplate for COPPA compliance. Keep as-is.
+    ──────────────────────────────────────────────────────────── -->
     <h2>7. Children's privacy</h2>
     <p>Linkway is not directed at children under 13. We do not knowingly collect personal information from anyone under 13. If you believe we have inadvertently collected such information, please contact us so we can delete it.</p>
 
+    <!-- ── Section 8: Changes to this policy ────────────────────
+         EDIT: Update the effective date at the top of the page
+         whenever a material change is made to this policy.
+         Google's OAuth verification may require re-review on changes.
+    ──────────────────────────────────────────────────────────── -->
     <h2>8. Changes to this policy</h2>
-    <p>We may update this Privacy Policy from time to time. When we do, we will update the effective date at the top. Continued use of Linkway after changes are posted constitutes your acceptance of the updated policy.</p>
+    <p>We may update this Privacy Policy from time to time. When we do, we will update the effective date at the top of this page. Continued use of Linkway after changes are posted constitutes your acceptance of the updated policy. For material changes to how we use data obtained through Google APIs, we will notify affected users by email.</p>
 
+    <!-- ── Section 9: Contact ────────────────────────────────────
+         EDIT: Update the email address if it changes.
+         This address is also listed on the Google OAuth consent screen —
+         keep both places in sync.
+    ──────────────────────────────────────────────────────────── -->
     <h2>9. Contact us</h2>
     <p>If you have questions about this Privacy Policy or want to request deletion of your data, contact us at:</p>
     <div class="contact-box">
@@ -203,9 +326,11 @@
       Email: <a href="mailto:ngtnleadership@gmail.com">ngtnleadership@gmail.com</a></p>
     </div>
 
-  </div>
-</div>
+  </div><!-- end .card -->
+</div><!-- end .page -->
 
+<!-- Minimal footer: links back to the landing page and to this policy.
+     EDIT: Update year in the copyright line if needed. -->
 <footer>
   <a href="landing.html">Linkway</a> &middot; <a href="privacy.html">Privacy policy</a>
 </footer>
