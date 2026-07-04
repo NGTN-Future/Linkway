@@ -21,10 +21,10 @@
      SAFE FOR VOLUNTEER LINKS: the redirect only fires when NONE
      of the four recognized campaign URL parameters are present.
      Any valid volunteer share link carries one of:
-       ?cid=   — current centralized slug format
-       ?d=     — legacy deployment ID format
-       ?ep=    — legacy base64 endpoint format
-       ?cfg=   — oldest legacy full-config format
+       ?cid=    -  current centralized slug format
+       ?d=      -  legacy deployment ID format
+       ?ep=     -  legacy base64 endpoint format
+       ?cfg=    -  oldest legacy full-config format
      All four are checked so legacy links continue to work.
 
      window.location.replace() vs. href =:
@@ -49,9 +49,9 @@
       var stored = localStorage.getItem('canvass:cfg');
       if (stored) {
         var parsed = JSON.parse(stored);
-        if (parsed && parsed.campaignId) return; // known campaign — let boot() take over
+        if (parsed && parsed.campaignId) return; // known campaign  -  let boot() take over
       }
-    } catch(e) { /* localStorage unavailable or JSON malformed — fall through to redirect */ }
+    } catch(e) { /* localStorage unavailable or JSON malformed  -  fall through to redirect */ }
 
     // No URL params and no stored campaign: this is a genuine bare root visit.
     // Send to onboard so new organizers can self-serve without hitting the sign-in screen.
@@ -70,19 +70,19 @@
      To change the look of the entire app, only edit this :root block.
      Never hard-code a colour value anywhere else in the CSS. */
   :root {
-    --ink:        #16243B;  /* primary text — dark navy */
-    --ink-soft:   #48586F;  /* secondary text — medium navy */
+    --ink:        #16243B;  /* primary text  -  dark navy */
+    --ink-soft:   #48586F;  /* secondary text  -  medium navy */
     --faint:      #7C8AA0;  /* muted/label text */
     --line:       #E1E7F0;  /* borders and dividers */
     --bg:         #EAEEF4;  /* page background */
     --surface:    #FFFFFF;  /* card/input backgrounds */
-    --blue:       #2456C6;  /* brand blue — primary interactive colour */
+    --blue:       #2456C6;  /* brand blue  -  primary interactive colour */
     --blue-d:     #1A409A;  /* darker blue for shadows and pressed states */
     --blue-tint:  #EAF0FC;  /* very light blue background for chip buttons */
     --amber:      #E89A2B;  /* warning / objection accent */
     --amber-tint: #FCF2DF;  /* very light amber background */
 
-    /* Support-scale colours — 1 = strong support (green) → 5 = strong oppose (red) */
+    /* Support-scale colours  -  1 = strong support (green) → 5 = strong oppose (red) */
     --s1: #1C8C57;
     --s2: #5DA94B;
     --s3: #E0A02E;
@@ -117,7 +117,7 @@
     /* Add bottom padding on iPhone X+ so content clears the home-indicator bar */
     padding-bottom: env(safe-area-inset-bottom);
   }
-  /* Global button reset — inherits font so no override needed per-button */
+  /* Global button reset  -  inherits font so no override needed per-button */
   button { font: inherit; cursor: pointer; border: 0; background: none; color: inherit; }
   /* .wrap: the single-column centered content area used by both screens */
   .wrap  { max-width: 560px; margin: 0 auto; min-height: 100dvh; display: flex; flex-direction: column; }
@@ -134,7 +134,7 @@
   .brand b    { font-size: 15px; letter-spacing: .2px; }
   .brand span { font-size: 11px; color: var(--faint); font-weight: 600;
                 letter-spacing: .6px; text-transform: uppercase; }
-  /* Phone / Door toggle — pill with two buttons; aria-pressed tracks active */
+  /* Phone / Door toggle  -  pill with two buttons; aria-pressed tracks active */
   .modeToggle {
     display: flex; background: var(--bg); border-radius: 999px;
     padding: 3px; font-weight: 700; font-size: 13px;
@@ -142,7 +142,7 @@
   .modeToggle button           { padding: 7px 12px; border-radius: 999px; color: var(--ink-soft); }
   /* Active state: filled blue pill */
   .modeToggle button[aria-pressed="true"] { background: var(--blue); color: #fff; box-shadow: var(--shadow); }
-  /* Log button — shows unsent count in a blue badge */
+  /* Log button  -  shows unsent count in a blue badge */
   .logBtn {
     display: flex; align-items: center; gap: 6px;
     background: var(--blue-tint); color: var(--blue-d);
@@ -165,13 +165,13 @@
     text-transform: uppercase; color: var(--blue);
   }
 
-  /* Progress rail — horizontal bar of 7 dots, filled/done/pending states */
+  /* Progress rail  -  horizontal bar of 7 dots, filled/done/pending states */
   .rail { display: flex; gap: 5px; margin: 10px 0 18px; }
   .rail i { height: 5px; flex: 1; border-radius: 99px; background: var(--line); }
   .rail i.on   { background: var(--blue); }   /* current step */
   .rail i.done { background: var(--s2); }     /* completed steps */
 
-  /* Script card — the blue-left-bordered box showing what to say */
+  /* Script card  -  the blue-left-bordered box showing what to say */
   .say {
     background: #FBFCFE; border: 1px solid var(--line);
     border-left: 5px solid var(--blue);
@@ -199,7 +199,7 @@
   /* Italic coaching note beneath script cards */
   .cue    { margin-top: 12px; font-size: 13.5px; color: var(--ink-soft); font-style: italic; }
 
-  /* Choice buttons — the main tap targets for each screen decision */
+  /* Choice buttons  -  the main tap targets for each screen decision */
   .choices { display: flex; flex-direction: column; gap: 12px; margin-top: 18px; }
   .choice {
     min-height: var(--tap); border-radius: 14px;
@@ -251,7 +251,7 @@
   .sb3 { background: var(--s3); } .sb4 { background: var(--s4); }
   .sb5 { background: var(--s5); }
 
-  /* Concern topic chips on the Listen screen — 2-column grid */
+  /* Concern topic chips on the Listen screen  -  2-column grid */
   .chips { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
   .chip {
     min-height: 60px; border-radius: 13px;
@@ -264,7 +264,7 @@
   .chip:active        { transform: translateY(2px); box-shadow: 0 0 0 var(--blue-d), var(--shadow); }
   .chip:focus-visible { outline: 2px solid var(--blue-d); outline-offset: 2px; }
 
-  /* "Optional extras" panel on the Wrap screen — yard sign, vote method, volunteer */
+  /* "Optional extras" panel on the Wrap screen  -  yard sign, vote method, volunteer */
   .extras   { margin-top: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 6px 14px; }
   .exhead   { font-size: 12px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; color: var(--faint); padding: 10px 0 4px; }
   .exrow    { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); }
@@ -273,7 +273,7 @@
   /* Segmented button control (e.g. Early / Mail / Election Day) */
   .seg      { display: flex; gap: 6px; flex-wrap: wrap; }
   .seg button { border: 1.5px solid var(--line); background: var(--surface); border-radius: 999px; padding: 7px 12px; font-size: 13.5px; font-weight: 700; color: var(--ink-soft); }
-  /* Pressed state for segment buttons — toggles via aria-pressed */
+  /* Pressed state for segment buttons  -  toggles via aria-pressed */
   .seg button[aria-pressed="true"] { background: var(--blue); color: #fff; border-color: var(--blue); }
 
   /* Session stats grid on the log sheet */
@@ -323,7 +323,7 @@
   /* Campaign type badge in the top bar (e.g. "General Election") */
   .type-badge { font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: var(--blue-tint); color: var(--blue-d); letter-spacing: .4px; white-space: nowrap; }
 
-  /* Bottom bar — fixed, sits above the phone's home indicator */
+  /* Bottom bar  -  fixed, sits above the phone's home indicator */
   .bottom {
     position: fixed; bottom: 0; left: 0; right: 0; z-index: 20;
     background: var(--surface); border-top: 1px solid var(--line);
@@ -341,7 +341,7 @@
   /* On very small screens, hide the who-bar label so buttons don't get cramped */
   @media (max-width: 400px) { .bottom .who { display: none; } .bottom { gap: 8px; } .miniBtn { padding: 9px 12px; } }
 
-  /* Bottom sheet — slides up from the bottom of the screen */
+  /* Bottom sheet  -  slides up from the bottom of the screen */
   /* Semi-transparent overlay behind the sheet */
   .scrim  { position: fixed; inset: 0; background: rgba(16,24,40,.45); z-index: 30; opacity: 0; pointer-events: none; transition: opacity .2s; }
   .scrim.open { opacity: 1; pointer-events: auto; }
@@ -365,7 +365,7 @@
   .faq:last-child  { border-bottom: 0; }
   .faq h4   { margin: 0 0 6px; font-size: 15px; }
   .faq p    { margin: 0; font-size: 15px; color: var(--ink-soft); line-height: 1.5; }
-  /* Indented answer — the blue left border shows it's a reply */
+  /* Indented answer  -  the blue left border shows it's a reply */
   .faq .reply { border-left: 3px solid var(--blue); padding-left: 11px; }
   /* Individual log entry in the log sheet */
   .logitem  { padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
@@ -416,7 +416,7 @@
 
 <!-- ── HTML shell ──────────────────────────────────────────── -->
 
-<!-- Main app shell — hidden until auth is confirmed in boot() -->
+<!-- Main app shell  -  hidden until auth is confirmed in boot() -->
 <div class="wrap" id="appWrap" hidden>
   <div class="top">
     <!-- Left: org name + key date from cfg -->
@@ -427,12 +427,12 @@
     <!-- Campaign type pill: "General Election", "Ballot Measure", etc.
          Hidden until a campaign type is set in cfg -->
     <span class="type-badge" id="typeBadge" hidden></span>
-    <!-- Phone/Door toggle — setMode() updates aria-pressed and re-renders current screen -->
+    <!-- Phone/Door toggle  -  setMode() updates aria-pressed and re-renders current screen -->
     <div class="modeToggle" role="group" aria-label="Contact method">
       <button id="mPhone" aria-pressed="true" onclick="setMode('phone')">Phone</button>
       <button id="mDoor"  aria-pressed="false" onclick="setMode('door')">Door</button>
     </div>
-    <!-- Log button — number badge updates via updateLogCount() every time a contact is logged -->
+    <!-- Log button  -  number badge updates via updateLogCount() every time a contact is logged -->
     <button class="logBtn" onclick="openSheet('log')">Log <b id="logCount">0</b></button>
   </div>
 
@@ -441,7 +441,7 @@
 
   <!-- Bottom bar: always visible while in the app -->
   <div class="bottom">
-    <!-- Shows "Name · Phone" or "No contact started" — updated by updateWhoBar() -->
+    <!-- Shows "Name · Phone" or "No contact started"  -  updated by updateWhoBar() -->
     <div class="who" id="whoBar">No contact started</div>
     <!-- Guide sheet: full how-to-use walkthrough for volunteers -->
     <button class="miniBtn guide" onclick="openSheet('guide')">Guide</button>
@@ -454,7 +454,7 @@
   </div>
 </div>
 
-<!-- Sign-in screen — shown before auth; hidden once enterApp() runs -->
+<!-- Sign-in screen  -  shown before auth; hidden once enterApp() runs -->
 <div class="wrap" id="signinWrap">
   <main style="justify-content:center; align-items:center; text-align:center; padding:24px;">
     <div style="max-width:340px">
@@ -471,9 +471,9 @@
   </main>
 </div>
 
-<!-- Bottom sheet backdrop — tap to close any open sheet -->
+<!-- Bottom sheet backdrop  -  tap to close any open sheet -->
 <div class="scrim" id="scrim" onclick="closeSheet()"></div>
-<!-- Bottom sheet — content swapped by openSheet(which) each time it opens -->
+<!-- Bottom sheet  -  content swapped by openSheet(which) each time it opens -->
 <div class="sheet" id="sheet" role="dialog" aria-modal="true">
   <header>
     <h3 id="sheetTitle"></h3>
@@ -481,7 +481,7 @@
   </header>
   <!-- Scrollable content area (log entries, guide text, FAQ, etc.) -->
   <div class="scroll"      id="sheetBody"></div>
-  <!-- Action buttons (Submit, Download CSV, etc.) — hidden unless relevant -->
+  <!-- Action buttons (Submit, Download CSV, etc.)  -  hidden unless relevant -->
   <div class="sheetActions" id="sheetActions" hidden></div>
 </div>
 
@@ -504,7 +504,7 @@
    blank-line-separated paragraphs as prompt, response, prompt...
    ============================================================ */
 
-// The canonical ordered list of slot names. Order matters — it
+// The canonical ordered list of slot names. Order matters  -  it
 // determines which slot is "active" when the parser encounters a header.
 const SLOT_NAMES = ['reach','intro','listen','case','support','commit','wrap','objections'];
 
@@ -554,7 +554,7 @@ function parseObjections(raw) {
         // Answer line: append to the current response.
         current.response = (current.response ? current.response + ' ' : '') + aMatch[1].trim();
       } else if (current && line.trim()) {
-        // Continuation line after an A: block — treat as part of the response.
+        // Continuation line after an A: block  -  treat as part of the response.
         current.response = (current.response ? current.response + ' ' : '') + line.trim();
       }
     }
@@ -616,7 +616,7 @@ function parseOrganizerScript(raw) {
   return { slots, objections: parseObjections(objectionsRaw), unplaced: unplaced.trim() };
 }
 
-// Memoized parsed script — only re-parses when cfg.rawScript changes.
+// Memoized parsed script  -  only re-parses when cfg.rawScript changes.
 // Avoids re-running the full parser on every render call during a session.
 let _parsedScriptCache = { raw: null, parsed: null };
 function getParsedScript() {
@@ -662,7 +662,7 @@ function escHtmlSafe(s) {
      why the frontend can't live at the /exec URL itself.)
    - APPS_SCRIPT_URL: this campaign's Apps Script /exec endpoint.
      Baked in here so organizers and volunteers never have to
-     paste it — boot() auto-wires it into cfg.endpoint.
+     paste it  -  boot() auto-wires it into cfg.endpoint.
    ============================================================ */
 
 // OAuth client ID from Google Cloud Console (project linkway-501103).
@@ -670,12 +670,12 @@ function escHtmlSafe(s) {
 // TO UPDATE: swap this when switching to a new GCP project.
 const GOOGLE_CLIENT_ID = '347962833446-q6bb44u234bs495i6v24n8ve703berm6.apps.googleusercontent.com';
 
-// Centralized Apps Script /exec URL — serves ALL campaigns via ?cid=slug.
+// Centralized Apps Script /exec URL  -  serves ALL campaigns via ?cid=slug.
 // Baked in so volunteers just open their campaign link, no config needed.
 // TO UPDATE: paste the new deployment URL here after every major redeploy.
 const APPS_SCRIPT_URL  = 'https://script.google.com/macros/s/AKfycbwn9qCBySXm0AieifDzesdpCfsLV2u8NgCu21sZnexaG4LhiI5AEXk3vVP4dFhxcC-w/exec';
 
-// True when APPS_SCRIPT_URL is a real URL — hides the "paste endpoint" field
+// True when APPS_SCRIPT_URL is a real URL  -  hides the "paste endpoint" field
 // in Campaign Setup because boot() wires cfg.endpoint automatically.
 const HAS_BAKED_ENDPOINT = typeof APPS_SCRIPT_URL === 'string' && APPS_SCRIPT_URL.startsWith('http');
 
@@ -767,7 +767,7 @@ async function handleCredential(response) {
   const result = await checkApproved(profile.email);
 
   if (result.reason === 'no-endpoint') {
-    // No backend exists yet — this device is bootstrapping the campaign.
+    // No backend exists yet  -  this device is bootstrapping the campaign.
     // Grant Admin so they can reach Campaign Setup. Once the endpoint and
     // volunteer list exist, all subsequent sign-ins go through normal approval.
     renderSigninStatus('Signed in, but no campaign is configured on this device yet. Continuing to setup.');
@@ -790,7 +790,7 @@ async function handleCredential(response) {
   }
 
   // Approved: save session and enter the app.
-  // Role is Admin or Volunteer — anything other than 'Admin' is treated as Volunteer.
+  // Role is Admin or Volunteer  -  anything other than 'Admin' is treated as Volunteer.
   auth = { email: profile.email, name: profile.name, approved: true, role: result.role === 'Admin' ? 'Admin' : 'Volunteer' };
   await saveAuth();
   cfg.canvasser = profile.name; // pre-fill the canvasser name field with their Google display name
@@ -848,7 +848,7 @@ function isSetupComplete() {
   const t = cfg.campaignType;
   if (t === 'ballot') {
     // Ballot campaigns additionally require measure name and Yes/No position.
-    // Donation URL is intentionally NOT required — some orgs collect offline.
+    // Donation URL is intentionally NOT required  -  some orgs collect offline.
     if (!cfg.measureName || !cfg.measurePosition) return false;
   }
   return true;
@@ -870,7 +870,7 @@ async function signOut() {
   if (cfg.campaignId) {
     window.location.replace(window.location.pathname + '?cid=' + encodeURIComponent(cfg.campaignId));
   } else {
-    location.reload(); // no campaign id stored — reload bare (organizer-only device)
+    location.reload(); // no campaign id stored  -  reload bare (organizer-only device)
   }
 }
 
@@ -1027,7 +1027,7 @@ function fill(template, extras = {}) {
 }
 
 // Builds the share URL that volunteers paste into their browser.
-// Centralized model: just ?cid=<slug> — all other config lives on the server.
+// Centralized model: just ?cid=<slug>  -  all other config lives on the server.
 function buildShareUrl() {
   try {
     if (cfg.campaignId) {
@@ -1072,9 +1072,9 @@ function lsAvailable() { try { localStorage.setItem('__t__','1'); localStorage.r
 const HAS_LS = lsAvailable();
 
 // Unified storage API. Resolution order:
-//   1. window.storage — Claude Artifacts API
-//   2. localStorage   — regular browser
-//   3. _mem           — in-memory fallback (data lost on page reload)
+//   1. window.storage  -  Claude Artifacts API
+//   2. localStorage    -  regular browser
+//   3. _mem            -  in-memory fallback (data lost on page reload)
 const store = {
   async get(k) {
     if (window.storage) { try { const r = await window.storage.get(k, false); return r ? r.value : null; } catch(e) { return null; } }
@@ -1121,7 +1121,7 @@ function updateLogCount() {
    Reset to blankContact() after every log.
    ============================================================ */
 
-// Current contact method — persists across contacts within a session
+// Current contact method  -  persists across contacts within a session
 // so the volunteer only needs to switch once when they change from phone to door.
 let mode = 'phone'; // 'phone' | 'door'
 
@@ -1215,7 +1215,7 @@ function wireChoices(node, items) {
   node.querySelectorAll('.choice').forEach(b => b.onclick = () => items[+b.dataset.i].fn());
 }
 
-// Steps that are NOT part of an in-progress conversation — excluded from
+// Steps that are NOT part of an in-progress conversation  -  excluded from
 // the back-navigation history so ‹ Back only navigates within a contact.
 const NON_CONTACT_STEPS = ['voterSetup', 'campaignSetup', 'awaitingSetup'];
 
@@ -1270,7 +1270,7 @@ function screen(railPos, eyebrow, sayHTML, choices, extra = '') {
 }
 
 // HTML-escapes user-supplied text for safe insertion into innerHTML.
-// Used for contact names, org names, etc. — anything that isn't organizer script.
+// Used for contact names, org names, etc.  -  anything that isn't organizer script.
 function escHtml(s) {
   return (s || '').replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
 }
@@ -1358,7 +1358,7 @@ const SCREENS = {
   },
 
 
-  /* ── Campaign setup — organizer fills this once before volunteers arrive ── */
+  /* ── Campaign setup  -  organizer fills this once before volunteers arrive ── */
   campaignSetup() {
     // Non-admins who somehow reach this screen get bounced to voterSetup.
     if (!isAdmin()) { go('voterSetup'); return; }
@@ -1397,7 +1397,7 @@ const SCREENS = {
       <!-- Key date: a dropdown for the label + a separate date picker.
            The two combine into a single cfg.ctaDate display string. -->
       <div class="field">
-        <label for="cs-date-label-select">Key date — title</label>
+        <label for="cs-date-label-select">Key date  -  title</label>
         <select id="cs-date-label-select">
           <option value="Election Day">Election Day</option>
           <option value="Primary Election">Primary Election</option>
@@ -1409,7 +1409,7 @@ const SCREENS = {
         </select>
         <!-- Hidden unless "__custom__" is selected in the dropdown above -->
         <input id="cs-date-label-custom" placeholder="Type your own title" style="margin-top:6px;display:none">
-        <label for="cs-date-picker" style="margin-top:10px;display:block">Key date — calendar date (optional)</label>
+        <label for="cs-date-picker" style="margin-top:10px;display:block">Key date  -  calendar date (optional)</label>
         <input id="cs-date-picker" type="date" value="${escHtml(cfg.ctaDateValue)}" aria-label="Pick the calendar date for the key date">
         <!-- Live preview of the combined saved string -->
         <div class="section-sub" id="cs-date-preview" style="margin-top:4px"></div>
@@ -1417,7 +1417,7 @@ const SCREENS = {
 
       <!-- Early voting: same pattern as key date but allows multiple dates -->
       <div class="field">
-        <label for="cs-early-label-select">Early voting / alternate action — title <span style="text-transform:none;font-weight:600;color:var(--faint)">(optional)</span></label>
+        <label for="cs-early-label-select">Early voting / alternate action  -  title <span style="text-transform:none;font-weight:600;color:var(--faint)">(optional)</span></label>
         <select id="cs-early-label-select">
           <option value="">None / not applicable</option>
           <option value="Early Voting">Early Voting</option>
@@ -1431,7 +1431,7 @@ const SCREENS = {
         <label for="cs-early-picker" style="margin-top:10px;display:block">Add a date (optional, can add more than one)</label>
         <input id="cs-early-picker" type="date" aria-label="Pick a date to add to early voting">
         <div class="section-sub" style="margin-top:6px">Each date you pick is added as a bubble below. Tap a bubble's ✕ to remove that date.</div>
-        <!-- Rendered by renderEarlyDates() — removable date bubbles -->
+        <!-- Rendered by renderEarlyDates()  -  removable date bubbles -->
         <div class="seg" id="cs-early-dates" style="margin-top:8px;flex-wrap:wrap"></div>
         <div class="section-sub" id="cs-early-preview" style="margin-top:4px"></div>
       </div>
@@ -1559,13 +1559,13 @@ const SCREENS = {
           lines inside Objections). You can reuse any of your variables above,
           e.g. <code>{candidate}</code>, <code>{ctaDate}</code>, <code>{orgName}</code>.
           <b>Reach, Intro, Commit, and Wrap are required</b> before you can save.
-          Listen, Case, and Support are optional — if left blank, that step is
+          Listen, Case, and Support are optional  -  if left blank, that step is
           skipped entirely for volunteers.
         </div>
       </div>
       <div class="field">
         <label for="cs-script">✍️ Write or paste your script in the box below</label>
-        <div class="section-sub" style="margin-bottom:6px">This text box is where your whole script lives. Type or past your script here — hashmarks are required '##' for header lines.</div>
+        <div class="section-sub" style="margin-bottom:6px">This text box is where your whole script lives. Type or past your script here  -  hashmarks are required '##' for header lines.</div>
         <textarea id="cs-script" rows="14" placeholder="##REACH&#10;Your opening line when someone answers.&#10;&#10;##INTRO&#10;Who you are and why you're reaching out.&#10;&#10;##LISTEN&#10;What you ask to hear their concerns. (optional)&#10;&#10;##CASE&#10;The case you make for your candidate or cause. (optional)&#10;&#10;##SUPPORT&#10;How you ask where they stand. (optional)&#10;&#10;##COMMIT&#10;The specific ask you make.&#10;&#10;##WRAP&#10;How you close the conversation.&#10;&#10;##OBJECTIONS&#10;Q: A common objection you hear.&#10;A: How you respond to it.">${escHtml(cfg.rawScript)}</textarea>
       </div>
       <!-- Validation error box: shown when Save is clicked but required fields are missing -->
@@ -1573,7 +1573,7 @@ const SCREENS = {
 
       <!-- Live preview: updates 250ms after each keystroke in the script textarea -->
       <details class="cfg" open>
-        <summary>👁 Live preview — how this gets sliced</summary>
+        <summary>👁 Live preview  -  how this gets sliced</summary>
         <div class="body" id="scriptPreviewBody"></div>
       </details>
 
@@ -1581,7 +1581,7 @@ const SCREENS = {
       <div id="chipsSection" hidden>
         <div class="section">
           <div class="section-head">Step 3 concern chips</div>
-          <div class="section-sub">Your script includes a ##LISTEN section, so volunteers will see this quick-tap menu. Pre-filled with sensible defaults for your campaign type — edit any label, remove ones that don't fit, or add your own.</div>
+          <div class="section-sub">Your script includes a ##LISTEN section, so volunteers will see this quick-tap menu. Pre-filled with sensible defaults for your campaign type  -  edit any label, remove ones that don't fit, or add your own.</div>
         </div>
         <div id="chipsList" style="display:flex;flex-direction:column;gap:8px"></div>
         <div class="choices" style="margin-top:10px">
@@ -1609,7 +1609,7 @@ const SCREENS = {
       <!-- Share link section -->
       <div class="section" id="shareSection">
         <div class="section-head">Share with volunteers</div>
-        <div class="section-sub">Send this link to every volunteer. When they open it, the campaign script and settings load automatically — no tech setup on their end.</div>
+        <div class="section-sub">Send this link to every volunteer. When they open it, the campaign script and settings load automatically  -  no tech setup on their end.</div>
       </div>
       <!-- Populated by renderShareLinkDisplay() after a successful save + publish -->
       <div id="shareLinkDisplay" hidden style="word-break:break-all;font-size:12.5px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px;color:var(--ink-soft);line-height:1.6;margin-top:4px"></div>
@@ -2073,7 +2073,7 @@ const SCREENS = {
   },
 
 
-  /* ── Voter / contact setup — start screen for each new contact ── */
+  /* ── Voter / contact setup  -  start screen for each new contact ── */
   voterSetup() {
     const ready = cfg.orgName && cfg.campaignType; // has campaign config been saved?
     const node = el(`<div class="setup">
@@ -2122,7 +2122,7 @@ const SCREENS = {
       // report). At least one of contact ID or name is required to match the voter file.
       const problems = [];
       if (!canv)         problems.push('<b>your name</b> (canvasser)');
-      if (!id && !name)  problems.push('a <b>Contact ID or contact name</b> — at least one');
+      if (!id && !name)  problems.push('a <b>Contact ID or contact name</b>  -  at least one');
       if (problems.length) {
         msgEl.hidden = false;
         msgEl.innerHTML = `<b>Missing info.</b> Please add ${problems.join(' and ')} before starting.`;
@@ -2149,7 +2149,7 @@ const SCREENS = {
   },
 
 
-  /* ── Step 1: Reach — confirm the right person is on the line/door ── */
+  /* ── Step 1: Reach  -  confirm the right person is on the line/door ── */
   identity() {
     const name = C.name || '[contact]';
     // Default "say" text if the organizer left ##REACH blank.
@@ -2163,7 +2163,7 @@ const SCREENS = {
 
     const choices = [
       { label: `Yes, it's ${escHtml(name)}`, ic: '✓', cls: 'go',  fn: () => go('intro') },
-      // Voicemail/no-answer — label changes based on phone/door mode.
+      // Voicemail/no-answer  -  label changes based on phone/door mode.
       mode === 'phone'
         ? { label: 'Voicemail / no pickup', ic: '📵', fn: () => { C.disposition = 'Voicemail'; wrap('voicemail'); } }
         : { label: 'No answer at the door', ic: '🚪', fn: () => { C.disposition = 'Not home';  wrap('nothome'); } },
@@ -2176,7 +2176,7 @@ const SCREENS = {
   },
 
 
-  /* ── Bad record flag — routes to the correct result code ── */
+  /* ── Bad record flag  -  routes to the correct result code ── */
   badrecord() {
     const sayHtml = `
       <div class="tag">Flag for list cleanup</div>
@@ -2193,7 +2193,7 @@ const SCREENS = {
   },
 
 
-  /* ── Step 2: Intro — who you are and why you're calling/knocking ── */
+  /* ── Step 2: Intro  -  who you are and why you're calling/knocking ── */
   intro() {
     const fallback = `<p>"Hi, I'm <em>[your name]</em>, a volunteer with <em>${escHtml(cfg.orgName || '[your org]')}</em>. Got a minute?"</p>`;
 
@@ -2210,7 +2210,7 @@ const SCREENS = {
   },
 
 
-  /* ── Step 3: Listen — optional; skipped when ##LISTEN is blank ── */
+  /* ── Step 3: Listen  -  optional; skipped when ##LISTEN is blank ── */
   listen() {
     const fallback = `<p>"Before I go on, what's the biggest thing on your mind right now?"</p>`;
 
@@ -2305,7 +2305,7 @@ const SCREENS = {
   },
 
 
-  /* ── Step 4: Case — optional; skipped when ##CASE is blank ── */
+  /* ── Step 4: Case  -  optional; skipped when ##CASE is blank ── */
   case() {
     const fallback = `<p>[Add your "## CASE" section in Campaign setup → Your script to fill this step in.]</p>`;
     const sayHtml = `
@@ -2324,7 +2324,7 @@ const SCREENS = {
   },
 
 
-  /* ── Step 5: Support scale — optional; skipped when ##SUPPORT is blank ── */
+  /* ── Step 5: Support scale  -  optional; skipped when ##SUPPORT is blank ── */
   support() {
     const fallback = `<p>"On a scale of 1 to 5, where are you right now?"</p>`;
     const labels = { 1: 'Strong support', 2: 'Lean support', 3: 'Undecided / unsure', 4: 'Lean against', 5: 'Strong against' };
@@ -2366,7 +2366,7 @@ const SCREENS = {
   },
 
 
-  /* ── Nudge — shown only for undecided (score 3); reuses ##CASE text ── */
+  /* ── Nudge  -  shown only for undecided (score 3); reuses ##CASE text ── */
   nudge() {
     const fallback = `<p>[Optional: nothing extra to say here. Tap "Move to commitment" to continue.]</p>`;
     const sayHtml = `
@@ -2381,7 +2381,7 @@ const SCREENS = {
   },
 
 
-  /* ── Step 6: Commit — the specific ask (vote / action / donation) ── */
+  /* ── Step 6: Commit  -  the specific ask (vote / action / donation) ── */
   commit() {
     const t = cfg.campaignType;
     const isFundraising = t === 'fundraising';
@@ -2438,7 +2438,7 @@ const SCREENS = {
   },
 
 
-  /* ── Payment routing — fundraising only ── */
+  /* ── Payment routing  -  fundraising only ── */
   payment() {
     // Only show cash option for door canvassing, and only when enabled in setup.
     const hasCard  = cfg.acceptsCard;
@@ -2474,7 +2474,7 @@ const SCREENS = {
   },
 
 
-  /* ── Gracious close — for score 4–5 or non-interested contacts ── */
+  /* ── Gracious close  -  for score 4–5 or non-interested contacts ── */
   gracious() {
     const fallback = `<p>"I respect that, thanks so much for your time. Have a great day!"</p>`;
     const sayHtml = `
@@ -2700,58 +2700,58 @@ function openSheet(which) {
       // ── CAMPAIGN SETUP GUIDE (organizer-facing) ──────────────────────────
       title.textContent = 'Campaign setup guide';
       body.innerHTML = `<div class="guidewrap">
-        <p>Fill out this page once before your volunteers arrive. Everything you enter here gets pushed to every device that opens your share link — you only set it up once.</p>
+        <p>Fill out this page once before your volunteers arrive. Everything you enter here gets pushed to every device that opens your share link  -  you only set it up once.</p>
 
         <h4>🟦 Campaign details</h4>
         <p><b>Organization name</b> appears in the top bar of the canvassing tool so volunteers always know which campaign they're on.</p>
         <p><b>Campaign type</b> controls which fields appear below and sets sensible defaults for concern chips on the Listen step. Pick the type that best describes what you're running.</p>
-        <p><b>Key date</b> is the date your script refers to — election day, event date, petition deadline, etc. It shows up in the top bar and is available as <code>{ctaDate}</code> in your script.</p>
-        <p><b>Canvasser name</b> is pre-filled from the signed-in Google account. Volunteers can overwrite it on the start screen — it's just the default.</p>
+        <p><b>Key date</b> is the date your script refers to  -  election day, event date, petition deadline, etc. It shows up in the top bar and is available as <code>{ctaDate}</code> in your script.</p>
+        <p><b>Canvasser name</b> is pre-filled from the signed-in Google account. Volunteers can overwrite it on the start screen  -  it's just the default.</p>
         <p>Campaign-type-specific fields (candidate name, office, ballot measure, issue, ask amount, etc.) appear below the type selector. These power the <code>{variable}</code> placeholders in your script.</p>
 
         <h4>🟦 Writing your script</h4>
-        <p>Paste your entire script into the single text box. Divide it into sections using <code>##</code> headers on their own line — one header per section:</p>
+        <p>Paste your entire script into the single text box. Divide it into sections using <code>##</code> headers on their own line  -  one header per section:</p>
         <ul>
-          <li><code>## REACH</code> — what you say when someone answers <b>(required)</b></li>
-          <li><code>## INTRO</code> — who you are and why you're reaching out <b>(required)</b></li>
-          <li><code>## LISTEN</code> — how you ask what's on their mind (optional)</li>
-          <li><code>## CASE</code> — the case you make for your candidate or cause (optional)</li>
-          <li><code>## SUPPORT</code> — how you ask where they stand (optional)</li>
-          <li><code>## COMMIT</code> — the specific ask <b>(required)</b></li>
-          <li><code>## WRAP</code> — how you close the conversation <b>(required)</b></li>
-          <li><code>## OBJECTIONS</code> — common pushback and responses (optional)</li>
+          <li><code>## REACH</code>  -  what you say when someone answers <b>(required)</b></li>
+          <li><code>## INTRO</code>  -  who you are and why you're reaching out <b>(required)</b></li>
+          <li><code>## LISTEN</code>  -  how you ask what's on their mind (optional)</li>
+          <li><code>## CASE</code>  -  the case you make for your candidate or cause (optional)</li>
+          <li><code>## SUPPORT</code>  -  how you ask where they stand (optional)</li>
+          <li><code>## COMMIT</code>  -  the specific ask <b>(required)</b></li>
+          <li><code>## WRAP</code>  -  how you close the conversation <b>(required)</b></li>
+          <li><code>## OBJECTIONS</code>  -  common pushback and responses (optional)</li>
         </ul>
-        <div class="gcallout"><b>Reach, Intro, Commit, and Wrap are required</b> — the Save button will tell you exactly which ones are missing. <b>Listen, Case, and Support are optional</b>: leave any of those out and that step is skipped entirely in the volunteer flow.</div>
+        <div class="gcallout"><b>Reach, Intro, Commit, and Wrap are required</b>  -  the Save button will tell you exactly which ones are missing. <b>Listen, Case, and Support are optional</b>: leave any of those out and that step is skipped entirely in the volunteer flow.</div>
 
         <h4>🟦 Using variables in your script</h4>
         <p>Wrap any field name in curly braces to pull its value into the script automatically. Common ones:</p>
         <ul>
-          <li><code>{orgName}</code> — your organization name</li>
-          <li><code>{candidate}</code> — candidate name (election campaigns)</li>
-          <li><code>{ctaDate}</code> — your key date</li>
-          <li><code>{office}</code> — office being sought</li>
-          <li><code>{measureName}</code> — ballot measure name</li>
-          <li><code>{actionAsk}</code> — the specific action ask (advocacy / nonprofit)</li>
-          <li><code>{askAmount}</code> — donation ask amount (fundraising)</li>
+          <li><code>{orgName}</code>  -  your organization name</li>
+          <li><code>{candidate}</code>  -  candidate name (election campaigns)</li>
+          <li><code>{ctaDate}</code>  -  your key date</li>
+          <li><code>{office}</code>  -  office being sought</li>
+          <li><code>{measureName}</code>  -  ballot measure name</li>
+          <li><code>{actionAsk}</code>  -  the specific action ask (advocacy / nonprofit)</li>
+          <li><code>{askAmount}</code>  -  donation ask amount (fundraising)</li>
         </ul>
         <p>The <b>live preview</b> below the script box updates as you type and shows exactly how each section will look to a volunteer, including filled-in variable values and a warning if any text falls outside a recognized header.</p>
 
         <h4>🟦 Adding objections</h4>
-        <p>Under <code>## OBJECTIONS</code>, write pairs using <code>Q:</code> and <code>A:</code> labels — one per line:</p>
+        <p>Under <code>## OBJECTIONS</code>, write pairs using <code>Q:</code> and <code>A:</code> labels  -  one per line:</p>
         <ul>
           <li><code>Q: They say they're already voting for the other candidate.</code></li>
-          <li><code>A: That's totally fair — thanks for sharing that with me.</code></li>
+          <li><code>A: That's totally fair  -  thanks for sharing that with me.</code></li>
         </ul>
         <p>These appear in the <b>Objections</b> button at the bottom of the volunteer screen so canvassers can look them up mid-conversation.</p>
 
         <h4>🟦 Concern chips</h4>
-        <p>If your script has a <code>## LISTEN</code> section, a chip editor appears below it. Chips are quick-tap buttons volunteers use to tag what a contact brings up. Three defaults load for your campaign type — you can edit labels, remove chips that don't fit, or add your own. Volunteers see a maximum of whatever you save here.</p>
+        <p>If your script has a <code>## LISTEN</code> section, a chip editor appears below it. Chips are quick-tap buttons volunteers use to tag what a contact brings up. Three defaults load for your campaign type  -  you can edit labels, remove chips that don't fit, or add your own. Volunteers see a maximum of whatever you save here.</p>
 
         <h4>🟦 Saving and sharing</h4>
         <ol>
           <li>Tap <b>Save campaign</b>. If anything required is missing, the button will list what to fix.</li>
           <li>After a successful save, a <b>share link</b> appears at the bottom. That link is what you send to every volunteer.</li>
-          <li>Anyone who opens the share link gets your script and campaign details automatically — no manual config on their end.</li>
+          <li>Anyone who opens the share link gets your script and campaign details automatically  -  no manual config on their end.</li>
         </ol>
         <div class="gcallout"><b>You can edit and re-save at any time.</b> Tap <b>Go to canvassing tool</b> after saving to switch into volunteer mode and preview exactly what your team will see. Use <b>Preview script</b> to check all sections without leaving setup.</div>
       </div>`;
@@ -2763,20 +2763,20 @@ function openSheet(which) {
         <p>This tool walks you through a canvassing conversation one tap at a time. Read the quoted lines out loud, then tap the button that matches what the person says. It logs each contact for you, no paper needed.</p>
         <h4>🟦 Before your first contact</h4>
         <ol>
-          <li>Pick <b>Phone</b> or <b>Door</b> at the top — the script adjusts for each.</li>
+          <li>Pick <b>Phone</b> or <b>Door</b> at the top  -  the script adjusts for each.</li>
           <li>On the start screen, type <b>your name</b> (set once, it tags everyone you reach).</li>
           <li>Confirm your organizer has finished Campaign setup, including the script.</li>
         </ol>
-        <div class="gcallout"><b>One-time setup.</b> Campaign details and the script stay saved on this device — your organizer only enters them once.</div>
+        <div class="gcallout"><b>One-time setup.</b> Campaign details and the script stay saved on this device  -  your organizer only enters them once.</div>
         <h4>🟦 For each contact</h4>
-        <p>Every conversation always includes Reach, Intro, Commit, and Wrap. Listen, Case, and Support only appear if your organizer wrote that section — otherwise the flow skips straight past it.</p>
+        <p>Every conversation always includes Reach, Intro, Commit, and Wrap. Listen, Case, and Support only appear if your organizer wrote that section  -  otherwise the flow skips straight past it.</p>
         <ol>
-          <li><b>Reach</b>: Confirm you have the right person. Wrong number, voicemail, or refusal? Tap it — the tool closes out and logs it correctly.</li>
+          <li><b>Reach</b>: Confirm you have the right person. Wrong number, voicemail, or refusal? Tap it  -  the tool closes out and logs it correctly.</li>
           <li><b>Intro</b>: One breath. Who you are, why you're here, ask for a minute.</li>
           <li><b>Listen</b> <em style="font-style:normal;color:var(--faint);font-size:12px">(if included)</em>: Ask what's on their mind, let them talk, optionally jot a note for yourself.</li>
           <li><b>The case</b> <em style="font-style:normal;color:var(--faint);font-size:12px">(if included)</em>: Whatever your organizer wrote for this step.</li>
           <li><b>Where they stand</b> <em style="font-style:normal;color:var(--faint);font-size:12px">(if included)</em>: The 1–5 scale. Log what they actually say.</li>
-          <li><b>The ask</b>: Vote, action, donation — whatever the campaign calls for.</li>
+          <li><b>The ask</b>: Vote, action, donation  -  whatever the campaign calls for.</li>
           <li><b>Wrap</b>: Close, add optional flags and a note, tap Log &amp; next contact.</li>
         </ol>
         <h4>🟦 The 1–5 support scale</h4>
@@ -2785,16 +2785,16 @@ function openSheet(which) {
         <div class="gkey"><span class="gchip sb3">3</span><span style="font-size:13.5px;color:var(--ink-soft)"><b style="color:var(--ink)">Undecided</b>, not sure yet</span></div>
         <div class="gkey"><span class="gchip sb4">4</span><span style="font-size:13.5px;color:var(--ink-soft)"><b style="color:var(--ink)">Lean against</b>, leaning the other side</span></div>
         <div class="gkey"><span class="gchip sb5">5</span><span style="font-size:13.5px;color:var(--ink-soft)"><b style="color:var(--ink)">Strong against</b>, set on something else</span></div>
-        <div class="gcallout">Log what they <b>actually say</b>. An honest score is more useful than a hopeful one. Never argue with a 4 or 5 — stay gracious and move on.</div>
+        <div class="gcallout">Log what they <b>actually say</b>. An honest score is more useful than a hopeful one. Never argue with a 4 or 5  -  stay gracious and move on.</div>
         <h4>🟦 Made a mistake?</h4>
-        <p>Tap <b>‹ Back</b> at the top of any step (including Wrap) to return to the previous step in the current conversation and fix something, without losing what you've already entered. Back only moves within the current contact — it won't undo a contact you've already logged.</p>
+        <p>Tap <b>‹ Back</b> at the top of any step (including Wrap) to return to the previous step in the current conversation and fix something, without losing what you've already entered. Back only moves within the current contact  -  it won't undo a contact you've already logged.</p>
         <h4>🟦 Submitting your work</h4>
         <ul>
           <li>Every finished contact lands in <b>Log</b> (top right).</li>
           <li>At the end of your shift, open Log and tap <b>Submit to Google Sheets</b>.</li>
           <li>Entries marked <b>⏳ pending</b> haven't been sent. <b>✓ sent</b> have.</li>
-          <li>Work is saved on this device with no signal — submit later when you have it.</li>
-          <li><b>Download CSV</b> is a backup. <b>Undo last</b> removes the most recent entry. <b>Clear</b> wipes everything — don't use until all entries show ✓ sent.</li>
+          <li>Work is saved on this device with no signal  -  submit later when you have it.</li>
+          <li><b>Download CSV</b> is a backup. <b>Undo last</b> removes the most recent entry. <b>Clear</b> wipes everything  -  don't use until all entries show ✓ sent.</li>
         </ul>
         <h4>🟦 Door canvassers: stay safe</h4>
         <ul>
@@ -2998,7 +2998,7 @@ async function submitToSheets(btn) {
   }
   const unsent = log.filter(r => !r.submitted);
   if (!unsent.length) {
-    // Nothing to send — briefly update the button label to confirm.
+    // Nothing to send  -  briefly update the button label to confirm.
     if (btn) { const t = btn.textContent; btn.textContent = 'Nothing new to send'; setTimeout(() => btn.textContent = t, 1600); }
     return;
   }
@@ -3050,15 +3050,15 @@ async function clearLog() {
    ─────────────────────────────────────────────────────────────
    Two PDF reports available from the Log sheet:
 
-   generateMyReport()       — per-volunteer, from local session log,
+   generateMyReport()        -  per-volunteer, from local session log,
                               no network needed, visible to everyone.
-   generateCampaignReport() — admin only, fetches all submitted rows
+   generateCampaignReport()  -  admin only, fetches all submitted rows
                               from Sheets via ?action=getLog, aggregates
                               overall totals + per-volunteer breakdown.
 
    Both share the same HTML/CSS shell (wrapReportHtml) and stats
    building blocks (statsBlockHtml). The browser's Print → Save as PDF
-   dialog handles the actual file — no library dependency needed.
+   dialog handles the actual file  -  no library dependency needed.
    ============================================================ */
 
 // Normalizes a contact record from either the local log (camelCase fields)
@@ -3085,7 +3085,7 @@ function aggregateContacts(contacts) {
   const total = norm.length;
   const convs = norm.filter(r => r.resultCode === 'Canvassed').length;
   const rate  = total ? Math.round(convs / total * 100) : 0;
-  // sc: support score histogram — { 1: count, 2: count, ..., 5: count }
+  // sc: support score histogram  -  { 1: count, 2: count, ..., 5: count }
   const sc    = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
   norm.forEach(r => { if (r.support >= 1 && r.support <= 5) sc[r.support]++; });
   return {
@@ -3352,7 +3352,7 @@ async function generateCampaignReport() {
     const inner = `
       ${statsBlockHtml(overall, `Campaign Summary · ${escHtml(label)}`)}
       <div class="dvdr"></div>
-      <h2>Volunteer Breakdown — ${names.length} canvasser${names.length !== 1 ? 's' : ''}</h2>
+      <h2>Volunteer Breakdown  -  ${names.length} canvasser${names.length !== 1 ? 's' : ''}</h2>
       <table>
         <thead><tr>
           <th>Canvasser</th>
@@ -3528,7 +3528,7 @@ function campaignReportPicker() {
 
 // Opens a new browser window, writes the report HTML into it, and
 // triggers the browser's print dialog (Print → Save as PDF).
-// No external PDF library needed — the browser handles it.
+// No external PDF library needed  -  the browser handles it.
 function printReportHtml(html) {
   const win = window.open('', '_blank', 'width=800,height=700');
   if (!win) {
@@ -3561,12 +3561,12 @@ function printReportHtml(html) {
       await saveCfg();
     }
 
-    // Volunteer config import — URL parameter resolution.
+    // Volunteer config import  -  URL parameter resolution.
     // Resolution order, newest to oldest (all legacy formats still work):
-    //   ?cid=<slug>  — centralized multi-tenant campaign id (current)
-    //   ?d=<id>      — raw Apps Script deployment ID (legacy)
-    //   ?ep=<b64>    — base64(endpointUrl) (older legacy)
-    //   ?cfg=<b64>   — base64(fullConfig)  (oldest legacy, pre-server-config)
+    //   ?cid=<slug>   -  centralized multi-tenant campaign id (current)
+    //   ?d=<id>       -  raw Apps Script deployment ID (legacy)
+    //   ?ep=<b64>     -  base64(endpointUrl) (older legacy)
+    //   ?cfg=<b64>    -  base64(fullConfig)  (oldest legacy, pre-server-config)
     const urlParams = new URLSearchParams(window.location.search);
     const cParam    = urlParams.get('cid');  // current format
     const dParam    = urlParams.get('d');    // legacy deployment ID
@@ -3634,7 +3634,7 @@ function printReportHtml(html) {
     await loadAuth(); // load stored auth session
 
     if (auth.approved && auth.email) {
-      // Already authenticated on this device — skip straight to the app.
+      // Already authenticated on this device  -  skip straight to the app.
       enterApp();
     } else {
       // Show the explicit "Sign in with Google" button.
