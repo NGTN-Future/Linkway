@@ -8,6 +8,41 @@
 <meta charset="utf-8">
 <!-- viewport: fills the phone screen, respects safe-area on notched devices -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- ── Root redirect guard ─────────────────────────────────────
+     PURPOSE: when a visitor opens the bare root URL with no
+     campaign parameter, redirect them to the onboarding page
+     instead of showing the volunteer sign-in screen.
+
+     RUNS BEFORE EVERYTHING ELSE: this block is placed before the
+     GIS <script> tag and before any CSS or HTML renders, so there
+     is no flash of the sign-in screen before the redirect fires.
+
+     SAFE FOR VOLUNTEER LINKS: the redirect only fires when NONE
+     of the four recognized campaign URL parameters are present.
+     Any valid volunteer share link carries one of:
+       ?cid=   — current centralized slug format
+       ?d=     — legacy deployment ID format
+       ?ep=    — legacy base64 endpoint format
+       ?cfg=   — oldest legacy full-config format
+     All four are checked so legacy links continue to work.
+
+     window.location.replace() vs. href =:
+     replace() removes this page from the browser history stack so
+     pressing Back on onboard.html does not bounce the user back
+     here and immediately redirect them again in a loop.
+     ──────────────────────────────────────────────────────────── -->
+<script>
+  (function() {
+    var p = new URLSearchParams(window.location.search);
+    // If none of the four campaign URL params are present, this is a
+    // bare root visit — send to onboard rather than the canvassing tool.
+    if (!p.has('cid') && !p.has('d') && !p.has('ep') && !p.has('cfg')) {
+      window.location.replace('onboard.html');
+    }
+    // If any param is present, fall through silently and let boot()
+    // handle the full resolution order as normal.
+  })();
+</script>
 <!-- Google Identity Services sign-in library, loaded async so it doesn't
      block page render. handleCredential() is called by it once the user picks
      a Google account. -->
