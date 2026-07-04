@@ -1097,15 +1097,23 @@ const store = {
 // Loaded from storage in loadLog(); written back after every change.
 let log = [];
 
+// Returns the storage key for the current campaign's log.
+// Namespaced by campaignId so every campaign on this device has its own
+// isolated log. Falls back to 'default' for admin devices that have no
+// campaignId yet (fresh setup before a cid has been assigned).
+function logKey() {
+  return 'log:' + (cfg.campaignId || 'default');
+}
+
 // Loads the stored log array into memory.
 async function loadLog() {
-  const raw = await store.get('log');
+  const raw = await store.get(logKey());
   if (raw) { try { log = JSON.parse(raw) || []; } catch(e) {} }
   updateLogCount(); // sync the badge in the top bar
 }
 // Persists the current in-memory log to storage and refreshes the badge.
 async function persistLog() {
-  await store.set('log', JSON.stringify(log));
+  await store.set(logKey(), JSON.stringify(log));
   updateLogCount();
 }
 // Updates the number badge on the "Log N" top-bar button.
