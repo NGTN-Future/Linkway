@@ -2678,72 +2678,119 @@ function openSheet(which) {
       : `<div class="empty">No objections added yet.<br>Add a "## OBJECTIONS" section to your script in Campaign setup.</div>`;
 
   } else if (which === 'guide') {
-    // Guide sheet: how-to walkthrough for volunteers.
-    // Admin-only script-writing section is injected when isAdmin().
-    title.textContent = 'How to use this tool';
-    const adminScriptSection = isAdmin() ? `
-      <h4>🟦 Writing your script (organizers)</h4>
-      <p>In <b>⚙︎ Campaign setup</b>, paste your own script into one box. Mark each part with a header on its own line:</p>
-      <ul>
-        <li><code>## REACH</code> — what you say when someone answers <b>(required)</b></li>
-        <li><code>## INTRO</code> — who you are and why you're reaching out <b>(required)</b></li>
-        <li><code>## LISTEN</code> — how you ask what's on their mind (optional)</li>
-        <li><code>## CASE</code> — the case you make for your candidate or cause (optional)</li>
-        <li><code>## SUPPORT</code> — how you ask where they stand (optional)</li>
-        <li><code>## COMMIT</code> — the specific ask <b>(required)</b></li>
-        <li><code>## WRAP</code> — how you close the conversation <b>(required)</b></li>
-        <li><code>## OBJECTIONS</code> — common pushback and responses, as <code>Q:</code> / <code>A:</code> pairs</li>
-      </ul>
-      <div class="gcallout"><b>Reach, Intro, Commit, and Wrap must all have text</b> before you can save — the Save button will tell you what's missing. <b>Listen, Case, and Support are optional</b>: leave any of those blank and volunteers won't see that step at all, the flow skips straight to the next one.</div>
-      <p>Use <code>{variableName}</code> anywhere in your script to pull in a value from the fields above it, e.g. <code>{candidate}</code>, <code>{orgName}</code>, <code>{ctaDate}</code>. The live preview below the script box shows exactly how your text gets sliced into each step before you save, including a warning if any text isn't under a recognized header.</p>
-      <p>Topic chips and pre-written talking points are gone — everything volunteers see comes from your own script text now.</p>` : '';
+    // Context-aware guide: shows Campaign Setup instructions when the organizer
+    // is on the setup screen, and the volunteer how-to in all other contexts.
+    // C.step tracks the currently rendered screen, so this check is always current.
 
-    body.innerHTML = `<div class="guidewrap">
-      <p>This tool walks you through a canvassing conversation one tap at a time. Read the quoted lines out loud, then tap the button that matches what the person says. It logs each contact for you, no paper needed.</p>
-      <h4>🟦 Before your first contact</h4>
-      <ol>
-        <li>Pick <b>Phone</b> or <b>Door</b> at the top, the script adjusts for each.</li>
-        <li>On the start screen, type <b>your name</b> (set once, it tags everyone you reach).</li>
-        <li>Confirm your organizer has finished <b>Campaign setup</b>, including the script.</li>
-      </ol>
-      <div class="gcallout"><b>One-time setup.</b> Campaign details and the script stay saved on this device, your organizer only enters them once.</div>
-      ${adminScriptSection}
-      <h4>🟦 For each contact</h4>
-      <p>Every conversation always includes Reach, Intro, Commit, and Wrap. Listen, Case, and Support only appear if your organizer wrote that section — otherwise the flow skips straight past it.</p>
-      <ol>
-        <li><b>Reach</b>: Confirm you have the right person. Wrong number, voicemail, or refusal? Tap it, the tool closes out and logs it correctly.</li>
-        <li><b>Intro</b>: One breath. Who you are, why you're here, ask for a minute.</li>
-        <li><b>Listen</b> <em style="font-style:normal;color:var(--faint);font-size:12px">(if included)</em>: Ask what's on their mind, let them talk, optionally jot a note for yourself.</li>
-        <li><b>The case</b> <em style="font-style:normal;color:var(--faint);font-size:12px">(if included)</em>: Whatever your organizer wrote for this step.</li>
-        <li><b>Where they stand</b> <em style="font-style:normal;color:var(--faint);font-size:12px">(if included)</em>: The 1–5 scale. Log what they actually say.</li>
-        <li><b>The ask</b>: Vote, action, donation, whatever the campaign type calls for.</li>
-        <li><b>Wrap</b>: Close, add optional flags and a note, tap Log &amp; next contact.</li>
-      </ol>
-      <h4>🟦 The 1–5 support scale</h4>
-      <div class="gkey"><span class="gchip sb1">1</span><span style="font-size:13.5px;color:var(--ink-soft)"><b style="color:var(--ink)">Strong support</b>, definitely with us</span></div>
-      <div class="gkey"><span class="gchip sb2">2</span><span style="font-size:13.5px;color:var(--ink-soft)"><b style="color:var(--ink)">Lean support</b>, leaning our way</span></div>
-      <div class="gkey"><span class="gchip sb3">3</span><span style="font-size:13.5px;color:var(--ink-soft)"><b style="color:var(--ink)">Undecided</b>, not sure yet</span></div>
-      <div class="gkey"><span class="gchip sb4">4</span><span style="font-size:13.5px;color:var(--ink-soft)"><b style="color:var(--ink)">Lean against</b>, leaning the other side</span></div>
-      <div class="gkey"><span class="gchip sb5">5</span><span style="font-size:13.5px;color:var(--ink-soft)"><b style="color:var(--ink)">Strong against</b>, set on something else</span></div>
-      <div class="gcallout">Log what they <b>actually say</b>. An honest score is more useful than a hopeful one. Never argue with a 4 or 5, stay gracious and move on.</div>
-      <h4>🟦 Made a mistake?</h4>
-      <p>Tap <b>‹ Back</b> at the top of any step (including Wrap) to return to the previous step in the current conversation and fix something, without losing what you've already entered. Back only moves within the current contact — it won't undo a contact you've already logged.</p>
-      <h4>🟦 Submitting your work</h4>
-      <ul>
-        <li>Every finished contact lands in <b>Log</b> (top right).</li>
-        <li>At the end of your shift, open Log and tap <b>Submit to Google Sheets</b>.</li>
-        <li>Entries marked <b>⏳ pending</b> haven't been sent. <b>✓ sent</b> have.</li>
-        <li>Work is saved on this device with no signal, submit later when you have it.</li>
-        <li><b>Download CSV</b> is a backup. <b>Undo last</b> removes the most recent entry. <b>Clear</b> wipes everything, don't use until all entries show ✓ sent.</li>
-      </ul>
-      <h4>🟦 Door canvassers: stay safe</h4>
-      <ul>
-        <li>Watch for signs someone's home but <b>stay on the porch</b>. Don't block the door.</li>
-        <li>No answer? Leave literature <b>on the door, not in the mailbox</b> (illegal).</li>
-        <li>Anyone asks you to leave, thank them and go. Your safety comes first.</li>
-      </ul>
-      <p style="margin-top:14px"><b>That's it.</b> Read the lines like a real person, listen more than you talk, log honestly. Thank you for being out there! 💙</p>
-    </div>`;
+    if (C.step === 'campaignSetup') {
+      // ── CAMPAIGN SETUP GUIDE (organizer-facing) ──────────────────────────
+      title.textContent = 'Campaign setup guide';
+      body.innerHTML = `<div class="guidewrap">
+        <p>Fill out this page once before your volunteers arrive. Everything you enter here gets pushed to every device that opens your share link — you only set it up once.</p>
+
+        <h4>🟦 Campaign details</h4>
+        <p><b>Organization name</b> appears in the top bar of the canvassing tool so volunteers always know which campaign they're on.</p>
+        <p><b>Campaign type</b> controls which fields appear below and sets sensible defaults for concern chips on the Listen step. Pick the type that best describes what you're running.</p>
+        <p><b>Key date</b> is the date your script refers to — election day, event date, petition deadline, etc. It shows up in the top bar and is available as <code>{ctaDate}</code> in your script.</p>
+        <p><b>Canvasser name</b> is pre-filled from the signed-in Google account. Volunteers can overwrite it on the start screen — it's just the default.</p>
+        <p>Campaign-type-specific fields (candidate name, office, ballot measure, issue, ask amount, etc.) appear below the type selector. These power the <code>{variable}</code> placeholders in your script.</p>
+
+        <h4>🟦 Writing your script</h4>
+        <p>Paste your entire script into the single text box. Divide it into sections using <code>##</code> headers on their own line — one header per section:</p>
+        <ul>
+          <li><code>## REACH</code> — what you say when someone answers <b>(required)</b></li>
+          <li><code>## INTRO</code> — who you are and why you're reaching out <b>(required)</b></li>
+          <li><code>## LISTEN</code> — how you ask what's on their mind (optional)</li>
+          <li><code>## CASE</code> — the case you make for your candidate or cause (optional)</li>
+          <li><code>## SUPPORT</code> — how you ask where they stand (optional)</li>
+          <li><code>## COMMIT</code> — the specific ask <b>(required)</b></li>
+          <li><code>## WRAP</code> — how you close the conversation <b>(required)</b></li>
+          <li><code>## OBJECTIONS</code> — common pushback and responses (optional)</li>
+        </ul>
+        <div class="gcallout"><b>Reach, Intro, Commit, and Wrap are required</b> — the Save button will tell you exactly which ones are missing. <b>Listen, Case, and Support are optional</b>: leave any of those out and that step is skipped entirely in the volunteer flow.</div>
+
+        <h4>🟦 Using variables in your script</h4>
+        <p>Wrap any field name in curly braces to pull its value into the script automatically. Common ones:</p>
+        <ul>
+          <li><code>{orgName}</code> — your organization name</li>
+          <li><code>{candidate}</code> — candidate name (election campaigns)</li>
+          <li><code>{ctaDate}</code> — your key date</li>
+          <li><code>{office}</code> — office being sought</li>
+          <li><code>{measureName}</code> — ballot measure name</li>
+          <li><code>{actionAsk}</code> — the specific action ask (advocacy / nonprofit)</li>
+          <li><code>{askAmount}</code> — donation ask amount (fundraising)</li>
+        </ul>
+        <p>The <b>live preview</b> below the script box updates as you type and shows exactly how each section will look to a volunteer, including filled-in variable values and a warning if any text falls outside a recognized header.</p>
+
+        <h4>🟦 Adding objections</h4>
+        <p>Under <code>## OBJECTIONS</code>, write pairs using <code>Q:</code> and <code>A:</code> labels — one per line:</p>
+        <ul>
+          <li><code>Q: They say they're already voting for the other candidate.</code></li>
+          <li><code>A: That's totally fair — thanks for sharing that with me.</code></li>
+        </ul>
+        <p>These appear in the <b>Objections</b> button at the bottom of the volunteer screen so canvassers can look them up mid-conversation.</p>
+
+        <h4>🟦 Concern chips</h4>
+        <p>If your script has a <code>## LISTEN</code> section, a chip editor appears below it. Chips are quick-tap buttons volunteers use to tag what a contact brings up. Three defaults load for your campaign type — you can edit labels, remove chips that don't fit, or add your own. Volunteers see a maximum of whatever you save here.</p>
+
+        <h4>🟦 Saving and sharing</h4>
+        <ol>
+          <li>Tap <b>Save campaign</b>. If anything required is missing, the button will list what to fix.</li>
+          <li>After a successful save, a <b>share link</b> appears at the bottom. That link is what you send to every volunteer.</li>
+          <li>Anyone who opens the share link gets your script and campaign details automatically — no manual config on their end.</li>
+        </ol>
+        <div class="gcallout"><b>You can edit and re-save at any time.</b> Tap <b>Go to canvassing tool</b> after saving to switch into volunteer mode and preview exactly what your team will see. Use <b>Preview script</b> to check all sections without leaving setup.</div>
+      </div>`;
+
+    } else {
+      // ── VOLUNTEER / CANVASSING GUIDE (default) ───────────────────────────
+      title.textContent = 'How to use this tool';
+      body.innerHTML = `<div class="guidewrap">
+        <p>This tool walks you through a canvassing conversation one tap at a time. Read the quoted lines out loud, then tap the button that matches what the person says. It logs each contact for you, no paper needed.</p>
+        <h4>🟦 Before your first contact</h4>
+        <ol>
+          <li>Pick <b>Phone</b> or <b>Door</b> at the top — the script adjusts for each.</li>
+          <li>On the start screen, type <b>your name</b> (set once, it tags everyone you reach).</li>
+          <li>Confirm your organizer has finished Campaign setup, including the script.</li>
+        </ol>
+        <div class="gcallout"><b>One-time setup.</b> Campaign details and the script stay saved on this device — your organizer only enters them once.</div>
+        <h4>🟦 For each contact</h4>
+        <p>Every conversation always includes Reach, Intro, Commit, and Wrap. Listen, Case, and Support only appear if your organizer wrote that section — otherwise the flow skips straight past it.</p>
+        <ol>
+          <li><b>Reach</b>: Confirm you have the right person. Wrong number, voicemail, or refusal? Tap it — the tool closes out and logs it correctly.</li>
+          <li><b>Intro</b>: One breath. Who you are, why you're here, ask for a minute.</li>
+          <li><b>Listen</b> <em style="font-style:normal;color:var(--faint);font-size:12px">(if included)</em>: Ask what's on their mind, let them talk, optionally jot a note for yourself.</li>
+          <li><b>The case</b> <em style="font-style:normal;color:var(--faint);font-size:12px">(if included)</em>: Whatever your organizer wrote for this step.</li>
+          <li><b>Where they stand</b> <em style="font-style:normal;color:var(--faint);font-size:12px">(if included)</em>: The 1–5 scale. Log what they actually say.</li>
+          <li><b>The ask</b>: Vote, action, donation — whatever the campaign calls for.</li>
+          <li><b>Wrap</b>: Close, add optional flags and a note, tap Log &amp; next contact.</li>
+        </ol>
+        <h4>🟦 The 1–5 support scale</h4>
+        <div class="gkey"><span class="gchip sb1">1</span><span style="font-size:13.5px;color:var(--ink-soft)"><b style="color:var(--ink)">Strong support</b>, definitely with us</span></div>
+        <div class="gkey"><span class="gchip sb2">2</span><span style="font-size:13.5px;color:var(--ink-soft)"><b style="color:var(--ink)">Lean support</b>, leaning our way</span></div>
+        <div class="gkey"><span class="gchip sb3">3</span><span style="font-size:13.5px;color:var(--ink-soft)"><b style="color:var(--ink)">Undecided</b>, not sure yet</span></div>
+        <div class="gkey"><span class="gchip sb4">4</span><span style="font-size:13.5px;color:var(--ink-soft)"><b style="color:var(--ink)">Lean against</b>, leaning the other side</span></div>
+        <div class="gkey"><span class="gchip sb5">5</span><span style="font-size:13.5px;color:var(--ink-soft)"><b style="color:var(--ink)">Strong against</b>, set on something else</span></div>
+        <div class="gcallout">Log what they <b>actually say</b>. An honest score is more useful than a hopeful one. Never argue with a 4 or 5 — stay gracious and move on.</div>
+        <h4>🟦 Made a mistake?</h4>
+        <p>Tap <b>‹ Back</b> at the top of any step (including Wrap) to return to the previous step in the current conversation and fix something, without losing what you've already entered. Back only moves within the current contact — it won't undo a contact you've already logged.</p>
+        <h4>🟦 Submitting your work</h4>
+        <ul>
+          <li>Every finished contact lands in <b>Log</b> (top right).</li>
+          <li>At the end of your shift, open Log and tap <b>Submit to Google Sheets</b>.</li>
+          <li>Entries marked <b>⏳ pending</b> haven't been sent. <b>✓ sent</b> have.</li>
+          <li>Work is saved on this device with no signal — submit later when you have it.</li>
+          <li><b>Download CSV</b> is a backup. <b>Undo last</b> removes the most recent entry. <b>Clear</b> wipes everything — don't use until all entries show ✓ sent.</li>
+        </ul>
+        <h4>🟦 Door canvassers: stay safe</h4>
+        <ul>
+          <li>Watch for signs someone's home but <b>stay on the porch</b>. Don't block the door.</li>
+          <li>No answer? Leave literature <b>on the door, not in the mailbox</b> (illegal).</li>
+          <li>Anyone asks you to leave, thank them and go. Your safety comes first.</li>
+        </ul>
+        <p style="margin-top:14px"><b>That's it.</b> Read the lines like a real person, listen more than you talk, log honestly. Thank you for being out there! 💙</p>
+      </div>`;
+    }
 
   } else if (which === 'preview') {
     // Preview sheet: all saved slot texts with filled variables, as volunteers will see them.
