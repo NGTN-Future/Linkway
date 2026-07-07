@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <!-- Page title shown in browser tabs and Google search results -->
-<title>Linkway — Canvassing and Volunteer Coordination for Small Campaigns</title>
+<title>Linkway Canvassing and Volunteer Coordination for Small Campaigns</title>
 <!-- Meta description shown in Google search result snippets (keep under ~160 chars) -->
 <meta name="description" content="Linkway gives small political campaigns and nonprofits a simple, affordable tool for door-to-door canvassing and volunteer coordination. Get set up in minutes.">
 
@@ -23,7 +23,7 @@
   /* ── Text colors ─────────────────────────────────────────────
      --ink       : main body text (very dark navy)
      --ink-soft  : secondary body text / descriptions (medium navy-gray)
-     --faint     : muted text — captions, placeholders, footer links
+     --faint     : muted text captions, placeholders, footer links
   ─────────────────────────────────────────────────────────────── */
   --ink:        #16243B;
   --ink-soft:   #48586F;
@@ -39,9 +39,9 @@
   --surface:    #FFFFFF;
 
   /* ── Accent / brand colors ───────────────────────────────────
-     --blue      : primary blue — buttons, links, icons, highlights
-     --blue-d    : darker blue — hover states, pressed states
-     --blue-tint : very light blue — icon box backgrounds, badges
+     --blue      : primary blue buttons, links, icons, highlights
+     --blue-d    : darker blue hover states, pressed states
+     --blue-tint : very light blue icon box backgrounds, badges
   ─────────────────────────────────────────────────────────────── */
   --blue:       #2456C6;
   --blue-d:     #1A409A;
@@ -94,7 +94,7 @@ a:hover { text-decoration: underline; }
    button on the right. Sticks to the top as the user scrolls.
    ================================================================ */
 nav {
-  background: var(--surface);              /* white — contrasts with the gray page bg */
+  background: var(--surface);              /* white contrasts with the gray page bg */
   border-bottom: 1px solid var(--line);   /* thin divider separating nav from content */
   padding: 14px 24px;
   display: flex;
@@ -105,7 +105,7 @@ nav {
   z-index: 10;                            /* appears above all page sections and cards */
 }
 
-/* "Linkway" wordmark — the "way" part is colored blue via the <span> */
+/* "Linkway" wordmark the "way" part is colored blue via the <span> */
 .nav-brand {
   font-size: 20px;
   font-weight: 900;
@@ -115,7 +115,7 @@ nav {
 }
 .nav-brand span { color: var(--blue); }
 
-/* "Get started free" button — pill shape, filled blue.
+/* "Get started free" button pill shape, filled blue.
    href points to onboard.html (the self-serve signup page). */
 .nav-cta {
   background: var(--blue);
@@ -137,9 +137,9 @@ nav {
    LAYOUT HELPERS
    Two max-width containers used throughout the page:
 
-   .container        — 860px wide, used for multi-column grids
+   .container        860px wide, used for multi-column grids
                        (features, steps, audience cards).
-   .container-narrow — 620px wide, used for centered single-column
+   .container-narrow 620px wide, used for centered single-column
                        text blocks (hero, CTA band).
 
    Both use margin: 0 auto to center on wide screens, and
@@ -171,7 +171,7 @@ section + section { padding-top: 0; }
    White background to set it apart from the gray page background.
    ================================================================ */
 .hero {
-  background: var(--surface);            /* white — differentiates hero from the rest */
+  background: var(--surface);            /* white differentiates hero from the rest */
   padding: 80px 0 72px;
   border-bottom: 1px solid var(--line);  /* visual separator before the features section */
   text-align: center;
@@ -227,7 +227,7 @@ section + section { padding-top: 0; }
   flex-wrap: wrap;   /* buttons stack vertically on very narrow screens */
 }
 
-/* Primary CTA — "Set up your campaign" — filled blue pill button. */
+/* Primary CTA "Set up your campaign" filled blue pill button. */
 .btn-primary {
   background: var(--blue);
   color: #fff;
@@ -241,7 +241,7 @@ section + section { padding-top: 0; }
 }
 .btn-primary:hover { background: var(--blue-d); text-decoration: none; }
 
-/* Secondary ghost button — "See how it works" — white fill, gray border.
+/* Secondary ghost button "See how it works" white fill, gray border.
    href="#how-it-works" scrolls the page to the steps section below. */
 .btn-secondary {
   background: var(--surface);
@@ -392,7 +392,7 @@ section + section { padding-top: 0; }
 
 /* Dark green circle with a white checkmark icon.
    flex-shrink: 0 prevents the circle from being squished when the
-   text block grows on narrow screens — without it the icon would
+   text block grows on narrow screens without it the icon would
    compress to make room for the longer text. */
 .ownership-icon {
   width: 36px;
@@ -586,7 +586,7 @@ section + section { padding-top: 0; }
    "darker white" state, so dimming slightly is the cleanest interaction cue. */
 .btn-white:hover { opacity: .92; text-decoration: none; }
 
-/* Dimmer white note below the button — 60% opacity so it reads as
+/* Dimmer white note below the button 60% opacity so it reads as
    secondary information without visually cluttering the CTA. */
 .cta-band-note {
   margin-top: 16px;
@@ -627,7 +627,7 @@ footer {
 }
 .footer-brand span { color: var(--blue); }
 
-/* Footer navigation links — muted color (--faint) so they don't
+/* Footer navigation links muted color (--faint) so they don't
    compete with the primary nav CTAs, darkening slightly on hover. */
 .footer-links {
   display: flex;
@@ -649,7 +649,7 @@ footer {
   color: var(--faint);
   margin-top: 8px;
 }
-/* NXTGNTN parent brand credit — slightly stronger than the faint
+/* NXTGNTN parent brand credit slightly stronger than the faint
    surrounding text so the brand name reads clearly without dominating. */
 .footer-nxtgntn {
   color: var(--ink-soft);
@@ -689,7 +689,7 @@ footer {
 <nav>
   <!-- Wordmark: "Link" in dark ink, "way" in blue via <span> -->
   <a href="/" class="nav-brand">Link<span>way</span></a>
-  <!-- Primary nav CTA — sends users to the self-serve signup flow -->
+  <!-- Primary nav CTA sends users to the self-serve signup flow -->
   <a href="onboard.html" class="nav-cta">Get started free</a>
 </nav>
 
@@ -711,9 +711,9 @@ footer {
          Wrap any words in <span></span> to color them blue. -->
     <h1>Canvassing and volunteer coordination, <span>done simply</span></h1>
 
-    <!-- Subheading — one or two sentences explaining what Linkway does.
+    <!-- Subheading one or two sentences explaining what Linkway does.
          EDIT: Update this paragraph text. Keep it under ~25 words for best layout. -->
-    <p class="hero-sub">Linkway gives your team a door-to-door canvassing tool and volunteer list that works together — no bloated software, no IT setup, no lock-in.</p>
+    <p class="hero-sub">Linkway gives your team a door-to-door canvassing tool and volunteer list that works together no bloated software, no IT setup, no lock-in.</p>
 
     <!-- Two CTA buttons side by side (wrap on mobile).
          EDIT: Update href="onboard.html" to change where the primary button goes.
@@ -732,7 +732,7 @@ footer {
 
 
 <!-- ================================================================
-     FEATURES SECTION — "What you get"
+     FEATURES SECTION "What you get"
      Six feature cards in a responsive 3-column grid.
      TO ADD A CARD: copy any .feature-card block and paste it in the grid.
        Update the SVG path, .feature-title, and .feature-body.
@@ -815,13 +815,13 @@ footer {
     </div>
     <!-- End feature cards grid -->
 
-    <!-- Data ownership green callout — appears below the card grid.
+    <!-- Data ownership green callout appears below the card grid.
          EDIT: Update the <strong> and <p> inside .ownership-text.
          The green color scheme is intentional: visually distinct from blue features,
          signals "safe / positive" for the data-ownership message. -->
     <div class="ownership-bar">
       <div class="ownership-icon">
-        <!-- Checkmark icon — white stroke on dark green circle -->
+        <!-- Checkmark icon white stroke on dark green circle -->
         <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
       </div>
       <div class="ownership-text">
@@ -835,7 +835,7 @@ footer {
 
 
 <!-- ================================================================
-     HOW IT WORKS SECTION — 3 numbered steps
+     HOW IT WORKS SECTION 3 numbered steps
      id="how-it-works" is the anchor target for the hero's
      "See how it works" button (href="#how-it-works").
      Uses .steps-bg wrapper instead of <section> to apply a white
@@ -854,22 +854,22 @@ footer {
 
     <div class="steps-grid">
 
-      <!-- STEP 1 — Campaign creation -->
-      <!-- The number inside .step-num is plain text — change it to update the numeral. -->
+      <!-- STEP 1 Campaign creation -->
+      <!-- The number inside .step-num is plain text change it to update the numeral. -->
       <div class="step">
         <div class="step-num">1</div>
         <p class="step-title">Create your campaign</p>
         <p class="step-body">Sign up with a Google account. Linkway copies a campaign spreadsheet into your Drive and sets up your unique volunteer sign-in link.</p>
       </div>
 
-      <!-- STEP 2 — Add volunteers -->
+      <!-- STEP 2 Add volunteers -->
       <div class="step">
         <div class="step-num">2</div>
         <p class="step-title">Add your volunteers</p>
         <p class="step-body">Paste your volunteers' Google email addresses into the Approved Volunteers tab of your spreadsheet. That's all &mdash; they can sign in immediately.</p>
       </div>
 
-      <!-- STEP 3 — Send the link -->
+      <!-- STEP 3 Send the link -->
       <div class="step">
         <div class="step-num">3</div>
         <p class="step-title">Send them the canvassing link</p>
@@ -884,7 +884,7 @@ footer {
 
 
 <!-- ================================================================
-     WHO IT'S FOR SECTION — audience cards
+     WHO IT'S FOR SECTION audience cards
      Four cards, each for a different customer segment.
      TO ADD A CARD: copy an .audience-card block and paste it in the grid.
        The grid auto-fits, so new cards reflow automatically.
@@ -898,26 +898,26 @@ footer {
 
     <div class="audience-grid">
 
-      <!-- AUDIENCE 1 — Local candidates -->
+      <!-- AUDIENCE 1 Local candidates -->
       <!-- EDIT: Change .audience-label and .audience-desc for each segment. -->
       <div class="audience-card">
         <div class="audience-label">Local candidates</div>
         <p class="audience-desc">City council, school board, state legislature &mdash; races where you know every volunteer by name.</p>
       </div>
 
-      <!-- AUDIENCE 2 — Ballot initiatives -->
+      <!-- AUDIENCE 2 Ballot initiatives -->
       <div class="audience-card">
         <div class="audience-label">Ballot initiatives</div>
         <p class="audience-desc">Single-issue campaigns that need to move fast and don't have time for six-week software onboarding.</p>
       </div>
 
-      <!-- AUDIENCE 3 — Nonprofits -->
+      <!-- AUDIENCE 3 Nonprofits -->
       <div class="audience-card">
         <div class="audience-label">Nonprofits</div>
         <p class="audience-desc">Issue advocacy groups doing community outreach and neighborhood organizing.</p>
       </div>
 
-      <!-- AUDIENCE 4 — Political clubs -->
+      <!-- AUDIENCE 4 Political clubs -->
       <div class="audience-card">
         <div class="audience-label">Political clubs</div>
         <p class="audience-desc">Party chapters and civic organizations coordinating volunteer canvass events across a district.</p>
@@ -950,7 +950,7 @@ footer {
          EDIT: Update href to change where this button goes. -->
     <a href="onboard.html" class="btn-white">Create your campaign</a>
 
-    <!-- Small note below button — reinforces the data-ownership message -->
+    <!-- Small note below button reinforces the data-ownership message -->
     <!-- EDIT: Change this text to update the note -->
     <p class="cta-band-note">Your data stays in your own Google Drive from day one.</p>
 
@@ -968,7 +968,7 @@ footer {
 <footer>
   <div class="footer-inner">
 
-    <!-- Wordmark — mirrors the nav brand -->
+    <!-- Wordmark mirrors the nav brand -->
     <div class="footer-brand">Link<span>way</span></div>
 
     <!-- Footer navigation links -->
@@ -978,7 +978,7 @@ footer {
       <a href="mailto:ngtnleadership@gmail.com">Contact</a>
     </div>
 
-    <!-- Copyright line — width: 100% in CSS forces it to its own row -->
+    <!-- Copyright line width: 100% in CSS forces it to its own row -->
     <p class="footer-copy">Linkway is a product of <strong class="footer-nxtgntn">NXTGNTN</strong> &nbsp;&middot;&nbsp; &copy; 2026 All rights reserved.</p>
 
   </div>
