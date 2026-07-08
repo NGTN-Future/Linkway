@@ -471,8 +471,6 @@ submitBtn.addEventListener('click', () => {
 
 // ── Campaign creation — runs after OAuth token is in hand ──────
 async function submitCampaign() {
-  setStatus('Creating your campaign…', '');
-
   const slug    = slugEl.value.trim().toLowerCase();
   const orgName = orgNameEl.value.trim();
   const email   = adminEmailEl.value.trim().toLowerCase();
@@ -482,6 +480,7 @@ async function submitCampaign() {
     // Step 1: create a fresh spreadsheet directly in the customer's Drive.
     // drive.file scope can create new files with a specified mimeType, but
     // cannot read/copy files it did not create.
+    setStatus('Creating your spreadsheet…', '');
     const createRes = await fetch(
       'https://www.googleapis.com/drive/v3/files',
       {
@@ -506,6 +505,7 @@ async function submitCampaign() {
     // Sheet. New Sheets are never automatically shared with the bot, so
     // this must happen here using the customer's own OAuth token, before
     // the backend (which authenticates as the bot) tries to write to it.
+    setStatus('Connecting your spreadsheet to Linkway…', '');
     const shareRes = await fetch(
       'https://www.googleapis.com/drive/v3/files/' + sheetId + '/permissions',
       {
@@ -527,6 +527,7 @@ async function submitCampaign() {
     }
 
     // Step 2: register the campaign with the backend
+    setStatus('Setting up your campaign…', '');
     const res  = await fetch(APPS_SCRIPT_URL + '?action=createCampaign', {
       method:  'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
