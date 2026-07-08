@@ -702,8 +702,8 @@ footer {
   <!-- Wordmark: "Link" in dark ink, "way" in blue via <span> -->
   <a href="/" class="nav-brand">Link<span>way</span></a>
   <div style="display:flex; align-items:center; gap:20px">
-    <!-- Anchors down to the "Find your campaign" section for returning users -->
-    <a href="#already" class="nav-back">Already have an account?</a>
+    <!-- Opens the Find Your Campaign modal for returning users -->
+    <a href="#" class="nav-back" onclick="event.preventDefault(); openFindCampaignModal();">Already have an account?</a>
     <!-- Primary nav CTA - sends users to the self-serve signup flow -->
     <a href="onboard.html" class="nav-cta">Get started free</a>
   </div>
@@ -748,7 +748,7 @@ footer {
 
 
 <!-- ================================================================
-     FIND YOUR CAMPAIGN SECTION
+     FIND YOUR CAMPAIGN MODAL
      For returning organizers/volunteers who already set up a campaign
      but don't have their bookmarked link handy. Linkway has no central
      login -- each campaign is reached via its own ?cid= slug -- so this
@@ -757,23 +757,30 @@ footer {
      onboarding to check slug availability), so no new backend endpoint
      is required: available:false means a campaign already exists at
      that slug, which is exactly the case we want to redirect on.
-     id="already" is the anchor target for the nav bar link above.
-     ================================================================ -->
-<section id="already" style="background:var(--surface); border-bottom:1px solid var(--line)">
-  <div class="container-narrow" style="text-align:center">
-    <div class="section-eyebrow">Already set up?</div>
-    <h2 class="section-title" style="font-size:clamp(20px,3vw,26px)">Find your campaign</h2>
-    <p class="section-sub" style="margin:0 auto 28px">Enter your campaign ID to jump straight to your canvassing tool and sign in.</p>
 
-    <div style="max-width:380px; margin:0 auto; display:flex; gap:10px; flex-wrap:wrap; justify-content:center">
+     Hidden by default (display:none on the overlay). Opened by the
+     "Already have an account?" nav link, closed via the X button,
+     clicking the backdrop, or pressing Escape.
+     ================================================================ -->
+<div id="findCampaignOverlay" onclick="if (event.target === this) closeFindCampaignModal()"
+  style="display:none; position:fixed; inset:0; background:rgba(22,36,59,.45); z-index:50; align-items:center; justify-content:center; padding:20px">
+  <div style="background:var(--surface); border-radius:20px; box-shadow:var(--shadow); max-width:420px; width:100%; padding:32px 28px; position:relative">
+    <button type="button" onclick="closeFindCampaignModal()" aria-label="Close"
+      style="position:absolute; top:16px; right:16px; background:none; border:none; font-size:22px; line-height:1; color:var(--faint); cursor:pointer; padding:4px">&times;</button>
+
+    <div class="section-eyebrow">Already set up?</div>
+    <h2 class="section-title" style="font-size:22px; margin-bottom:10px">Find your campaign</h2>
+    <p class="section-sub" style="max-width:none; margin-bottom:24px">Enter your campaign ID to jump straight to your canvassing tool and sign in.</p>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap">
       <input id="campaignIdInput" placeholder="e.g. smith2026" spellcheck="false" autocapitalize="none"
-        style="flex:1; min-width:180px; border:1.5px solid var(--line); border-radius:999px; padding:12px 20px; font:inherit; font-size:15px; color:var(--ink); background:var(--surface)">
+        style="flex:1; min-width:160px; border:1.5px solid var(--line); border-radius:999px; padding:12px 20px; font:inherit; font-size:15px; color:var(--ink); background:var(--surface)">
       <button id="findCampaignBtn" type="button" class="btn-primary" style="border:none; cursor:pointer">Go</button>
     </div>
     <!-- Populated by the lookup script near the end of the page -->
     <p id="findCampaignMsg" style="font-size:13px; color:var(--faint); margin-top:14px; margin-bottom:0; min-height:18px"></p>
   </div>
-</section>
+</div>
 
 
 <!-- ================================================================
@@ -1030,7 +1037,7 @@ footer {
 </footer>
 
 <!-- ================================================================
-     FIND YOUR CAMPAIGN - lookup logic
+     FIND YOUR CAMPAIGN - modal open/close + lookup logic
      Reuses the existing ?action=checkSlug endpoint (the same one
      onboard.html calls to check slug availability while signing up).
      checkSlug_ returns available:true when NO campaign is registered
@@ -1042,6 +1049,27 @@ footer {
      ================================================================ -->
 <script>
   const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwn9qCBySXm0AieifDzesdpCfsLV2u8NgCu21sZnexaG4LhiI5AEXk3vVP4dFhxcC-w/exec';
+
+  // Opens the modal and resets the form so a stale result from a
+  // previous lookup never lingers into the next time it's opened.
+  function openFindCampaignModal() {
+    const overlay = document.getElementById('findCampaignOverlay');
+    const input   = document.getElementById('campaignIdInput');
+    const msg     = document.getElementById('findCampaignMsg');
+    input.value = '';
+    msg.textContent = '';
+    overlay.style.display = 'flex';
+    input.focus();
+  }
+
+  function closeFindCampaignModal() {
+    document.getElementById('findCampaignOverlay').style.display = 'none';
+  }
+
+  // Escape key closes the modal from anywhere on the page.
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeFindCampaignModal();
+  });
 
   function findCampaign() {
     const input = document.getElementById('campaignIdInput');
