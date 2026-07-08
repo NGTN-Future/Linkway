@@ -135,7 +135,7 @@
 <div class="page">
   <div class="card">
 
-    <p class="policy-date">Effective date: January 1, 2025</p>
+    <p class="policy-date">Effective date: July 8, 2026</p>
     <h1>Privacy Policy</h1>
     <p class="intro">This Privacy Policy describes how Linkway ("we," "us," or "our") collects, uses, and handles information when you use our canvassing and volunteer coordination service. We've written it to be plain and specific, not generic boilerplate.</p>
 
@@ -155,10 +155,11 @@
     <p>We use this information to create your campaign entry in our registry and to send you a welcome email with your campaign's volunteer sign-in link.</p>
 
     <h2 style="font-size:15px; font-weight:700; margin-top:20px;">2b. Google Drive access (organizer)</h2>
-    <p>During campaign setup, we request permission to create a file in your Google Drive (<strong>drive.file</strong> scope). We use this permission only to copy the Linkway campaign spreadsheet template into your own Google Drive. We do not access any other files in your Drive. Once the spreadsheet is created, all canvass data goes directly into that file — it belongs to your Google account, not ours.</p>
+    <p>During campaign setup, we request permission to create a file in your Google Drive (<strong>drive.file</strong> scope). We use this permission to create a new, blank campaign spreadsheet directly in your Google Drive, and to share that spreadsheet with Linkway's service account so canvass data and volunteer information can be written to it. This scope can only interact with files created during your setup session — it cannot read, modify, or access any other files in your Drive. Once setup is complete, the spreadsheet belongs entirely to your Google account, and you can view, share, export, or delete it at any time from Google Drive without involving Linkway.</p>
 
-    <h2 style="font-size:15px; font-weight:700; margin-top:20px;">2c. Volunteer sign-in</h2>
+    <h2 style="font-size:15px; font-weight:700; margin-top:20px;">2c. Volunteer sign-in and volunteer list management</h2>
     <p>When a volunteer signs in with Google to use the canvassing tool, we verify their email address against the Approved Volunteers list stored in your campaign's spreadsheet. We do not store volunteer email addresses on our own servers; the list lives in your Google Sheet.</p>
+    <p>Campaign organizers can also add volunteers directly from the app. When you do, the email, name, and role you enter are written to the Approved Volunteers tab in your own Google Sheet via our service account — the same way canvass data is written (see Section 2d below). We do not retain a separate copy of this information on our servers.</p>
 
     <h2 style="font-size:15px; font-weight:700; margin-top:20px;">2d. Canvass activity</h2>
     <p>All canvass logs (doors knocked, voter contacts, support ratings, notes) are written directly to your campaign's Google Sheet. Linkway does not retain a separate copy of this data. Your campaign spreadsheet is the single source of truth, and it lives in your Google Drive.</p>
@@ -168,6 +169,7 @@
     <ul>
       <li>Create and identify your campaign account</li>
       <li>Route your volunteers' canvass submissions to your campaign's spreadsheet</li>
+      <li>Add volunteers to your campaign's Approved Volunteers list at your request, writing directly to your Google Sheet</li>
       <li>Send you a one-time welcome email with your campaign's volunteer link</li>
       <li>Respond to support requests if you contact us</li>
     </ul>
@@ -181,7 +183,7 @@
     <p>Linkway uses Google APIs, including Google Sign-In for authentication and the Google Drive API for campaign setup. Our use of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">Google API Services User Data Policy</a>, including the Limited Use requirements.</p>
     <p>Specifically:</p>
     <ul>
-      <li>We use the <strong>drive.file</strong> scope only to create the campaign spreadsheet template in the organizer's Drive. We do not read, modify, or access any other Drive files.</li>
+      <li>We use the <strong>drive.file</strong> scope only to create a new campaign spreadsheet in the organizer's Drive and to share it with our service account. We do not read, modify, or access any other Drive files.</li>
       <li>We do not transfer Google user data to third parties except as necessary to provide the Linkway service.</li>
       <li>We do not use Google user data for advertising purposes.</li>
       <li>We do not allow humans to read user data unless you have explicitly requested support from us and granted us access, or it is required for security or legal compliance.</li>
