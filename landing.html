@@ -132,6 +132,17 @@ nav {
   text-decoration: none;
 }
 
+/* "Already have an account?" nav link - plain text, muted, no button
+   chrome, since it's a secondary path (returning users) next to the
+   primary "Get started free" CTA (new users). */
+.nav-back {
+  font-size: 14px;
+  color: var(--faint);
+  text-decoration: none;
+  font-weight: 600;
+}
+.nav-back:hover { color: var(--ink-soft); text-decoration: none; }
+
 
 /* ================================================================
    LAYOUT HELPERS
@@ -683,14 +694,19 @@ footer {
 
 <!-- ================================================================
      NAVIGATION BAR
-     Logo on the left, "Get started free" button on the right.
-     EDIT href="onboard.html" to change where the button goes.
+     Logo on the left, an "Already have an account?" link, and the
+     "Get started free" button on the right.
+     EDIT href="onboard.html" to change where the CTA button goes.
      ================================================================ -->
 <nav>
   <!-- Wordmark: "Link" in dark ink, "way" in blue via <span> -->
   <a href="/" class="nav-brand">Link<span>way</span></a>
-  <!-- Primary nav CTA - sends users to the self-serve signup flow -->
-  <a href="onboard.html" class="nav-cta">Get started free</a>
+  <div style="display:flex; align-items:center; gap:20px">
+    <!-- Anchors down to the "Find your campaign" section for returning users -->
+    <a href="#already" class="nav-back">Already have an account?</a>
+    <!-- Primary nav CTA - sends users to the self-serve signup flow -->
+    <a href="onboard.html" class="nav-cta">Get started free</a>
+  </div>
 </nav>
 
 
@@ -729,6 +745,35 @@ footer {
 
   </div>
 </div>
+
+
+<!-- ================================================================
+     FIND YOUR CAMPAIGN SECTION
+     For returning organizers/volunteers who already set up a campaign
+     but don't have their bookmarked link handy. Linkway has no central
+     login -- each campaign is reached via its own ?cid= slug -- so this
+     is a lightweight lookup rather than a real sign-in form. It reuses
+     the existing checkSlug backend action (already used during
+     onboarding to check slug availability), so no new backend endpoint
+     is required: available:false means a campaign already exists at
+     that slug, which is exactly the case we want to redirect on.
+     id="already" is the anchor target for the nav bar link above.
+     ================================================================ -->
+<section id="already" style="background:var(--surface); border-bottom:1px solid var(--line)">
+  <div class="container-narrow" style="text-align:center">
+    <div class="section-eyebrow">Already set up?</div>
+    <h2 class="section-title" style="font-size:clamp(20px,3vw,26px)">Find your campaign</h2>
+    <p class="section-sub" style="margin:0 auto 28px">Enter your campaign ID to jump straight to your canvassing tool and sign in.</p>
+
+    <div style="max-width:380px; margin:0 auto; display:flex; gap:10px; flex-wrap:wrap; justify-content:center">
+      <input id="campaignIdInput" placeholder="e.g. smith2026" spellcheck="false" autocapitalize="none"
+        style="flex:1; min-width:180px; border:1.5px solid var(--line); border-radius:999px; padding:12px 20px; font:inherit; font-size:15px; color:var(--ink); background:var(--surface)">
+      <button id="findCampaignBtn" type="button" class="btn-primary" style="border:none; cursor:pointer">Go</button>
+    </div>
+    <!-- Populated by the lookup script near the end of the page -->
+    <p id="findCampaignMsg" style="font-size:13px; color:var(--faint); margin-top:14px; margin-bottom:0; min-height:18px"></p>
+  </div>
+</section>
 
 
 <!-- ================================================================
@@ -826,7 +871,7 @@ footer {
       </div>
       <div class="ownership-text">
         <strong>Your data lives in your Google Drive, not ours</strong>
-        <p>During signup, Linkway copies a template spreadsheet directly into your own Google Drive. All canvass logs and voter contacts stay in a Sheet that belongs to you. You can take it, share it, or delete it at any time.</p>
+        <p>During signup, Linkway creates a fresh spreadsheet directly in your own Google Drive. All canvass logs and voter contacts stay in a Sheet that belongs to you. You can take it, share it, or delete it at any time.</p>
       </div>
     </div>
 
@@ -859,7 +904,7 @@ footer {
       <div class="step">
         <div class="step-num">1</div>
         <p class="step-title">Create your campaign</p>
-        <p class="step-body">Sign up with a Google account. Linkway copies a campaign spreadsheet into your Drive and sets up your unique volunteer sign-in link.</p>
+        <p class="step-body">Sign up with a Google account. Linkway creates a campaign spreadsheet in your Drive and sets up your unique volunteer sign-in link.</p>
       </div>
 
       <!-- STEP 2 - Add volunteers -->
@@ -984,6 +1029,56 @@ footer {
   </div>
 </footer>
 
+<!-- ================================================================
+     FIND YOUR CAMPAIGN - lookup logic
+     Reuses the existing ?action=checkSlug endpoint (the same one
+     onboard.html calls to check slug availability while signing up).
+     checkSlug_ returns available:true when NO campaign is registered
+     at that slug, and available:false when one already exists -- so
+     available:false is exactly the signal that means "found it,
+     redirect there." No new backend endpoint was needed for this.
+     EDIT: keep APPS_SCRIPT_URL in sync with the same constant in
+     index.html and onboard.html if the deployment URL ever changes.
+     ================================================================ -->
+<script>
+  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwn9qCBySXm0AieifDzesdpCfsLV2u8NgCu21sZnexaG4LhiI5AEXk3vVP4dFhxcC-w/exec';
+
+  function findCampaign() {
+    const input = document.getElementById('campaignIdInput');
+    const msg   = document.getElementById('findCampaignMsg');
+    const slug  = input.value.trim().toLowerCase();
+
+    if (!slug) {
+      msg.style.color = '#CF3C3C';
+      msg.textContent = 'Enter your campaign ID first.';
+      return;
+    }
+
+    msg.style.color = 'var(--faint)';
+    msg.textContent = 'Looking up your campaign…';
+
+    fetch(APPS_SCRIPT_URL + '?action=checkSlug&slug=' + encodeURIComponent(slug))
+      .then(res => res.json())
+      .then(data => {
+        if (data.available === false) {
+          // A campaign already exists at this slug -- send them straight in.
+          window.location.href = 'index.html?cid=' + encodeURIComponent(slug);
+        } else {
+          msg.style.color = '#CF3C3C';
+          msg.textContent = "No campaign found with that ID. Check your welcome email for the exact link.";
+        }
+      })
+      .catch(() => {
+        msg.style.color = '#CF3C3C';
+        msg.textContent = 'Could not check that right now. Try again in a moment.';
+      });
+  }
+
+  document.getElementById('findCampaignBtn').addEventListener('click', findCampaign);
+  document.getElementById('campaignIdInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') findCampaign();
+  });
+</script>
 
 </body>
 </html>
