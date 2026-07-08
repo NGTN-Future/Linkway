@@ -462,8 +462,15 @@
 <div class="wrap" id="signinWrap">
   <main style="justify-content:center; align-items:center; text-align:center; padding:24px;">
     <div style="max-width:340px">
+      <!-- Escape hatch back to the landing page. Mainly for anyone who lands
+           here without meaning to (e.g. a bare-domain visit that should have
+           redirected to landing.html but hasn't yet due to CDN/browser caching),
+           but also just a reasonable "wrong link? go home" affordance generally. -->
+      <a href="landing.html" style="display:inline-block; font-size:13px; font-weight:700; color:var(--faint); margin-bottom:18px; text-decoration:none">&larr; Back to Linkway</a>
       <div class="eyebrow" style="margin-bottom:6px">Volunteer sign-in</div>
-      <h1 style="font-size:22px; margin:0 0 8px">Sign in to canvass</h1>
+      <!-- Populated by showSignin() with cfg.orgName once config loads, so
+           volunteers can confirm at a glance they're on the right campaign. -->
+      <h1 id="signinOrgName" style="font-size:22px; margin:0 0 8px">Sign in to canvass</h1>
       <p style="color:var(--ink-soft); font-size:15px; margin:0 0 22px">
         Sign in with the Google account your campaign organizer approved.
       </p>
@@ -811,6 +818,14 @@ function isAdmin() {
 function showSignin() {
   document.getElementById('appWrap').hidden = true;
   document.getElementById('signinWrap').hidden = false;
+
+  // Show the campaign's org name in the heading so volunteers can confirm
+  // at a glance they're on the right link, instead of a generic greeting.
+  // cfg.orgName is populated by boot()'s importFromEndpoint() call before
+  // showSignin() ever runs, so it's already available here on first paint.
+  const orgNameEl = document.getElementById('signinOrgName');
+  orgNameEl.textContent = cfg.orgName ? 'Sign in to canvass for ' + cfg.orgName : 'Sign in to canvass';
+
   if (window.google && window.google.accounts) {
     // google.accounts only exists after the GIS library (<script> in <head>) has loaded.
     // window.google is always truthy inside Apps Script (it injects its own google.script
