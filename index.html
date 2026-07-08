@@ -447,6 +447,9 @@
     <button class="miniBtn guide" onclick="openSheet('guide')">Guide</button>
     <!-- Objections sheet: Q&A pairs from the organizer's ##OBJECTIONS script section -->
     <button class="miniBtn alarm" onclick="openSheet('faq')">Objections</button>
+    <!-- Volunteers sheet: add + view Approved Volunteers. Admin-only; visibility
+         toggled in updateWhoBar() since this bar is shared across every screen. -->
+    <button class="miniBtn" id="volunteersBtn" onclick="openSheet('volunteers')" hidden>Volunteers</button>
     <!-- Restart: clears current contact and returns to voterSetup -->
     <button class="miniBtn"       onclick="restartContact()">Restart</button>
     <!-- Sign out: clears stored auth and reloads the sign-in screen -->
@@ -1300,6 +1303,8 @@ function updateWhoBar() {
   } else {
     badge.hidden = true;
   }
+  // Volunteers button (bottom bar) is admin-only.
+  document.getElementById('volunteersBtn').hidden = !isAdmin();
 }
 
 
@@ -1626,33 +1631,6 @@ const SCREENS = {
         <!-- Shown only after the share link has been generated -->
         <button class="choice" id="copyShareBtn" hidden><span class="ic">📋</span><span id="copyShareLabel">Copy link</span></button>
       </div>
-
-      <!-- Manage volunteers: add + view. Removal is handled directly in the Sheet. -->
-      <div class="section" id="volunteersSection">
-        <div class="section-head">Manage volunteers</div>
-        <div class="section-sub">Add volunteers so they can sign in and start canvassing.</div>
-      </div>
-      <div class="field">
-        <label for="vol-email">Volunteer email</label>
-        <input id="vol-email" type="email" placeholder="e.g. volunteer@example.com" autocomplete="off">
-      </div>
-      <div class="field">
-        <label for="vol-name">Name <span style="text-transform:none;font-weight:600;color:var(--faint)">(optional)</span></label>
-        <input id="vol-name" placeholder="e.g. Jordan P." autocomplete="off">
-      </div>
-      <div class="field">
-        <label for="vol-role">Role</label>
-        <select id="vol-role">
-          <option value="Volunteer" selected>Volunteer</option>
-          <option value="Admin">Admin</option>
-        </select>
-      </div>
-      <div class="warning-box" id="volAddMsg" hidden></div>
-      <div class="choices" style="margin-top:10px">
-        <button class="choice" id="addVolunteerBtn"><span class="ic">+</span><span>Add volunteer</span></button>
-      </div>
-      <!-- Populated by loadVolunteers() -->
-      <div id="volunteersList" style="margin-top:14px"></div>
     </div>`);
 
     render(node);
@@ -2052,88 +2030,6 @@ const SCREENS = {
         prompt('Copy this link:', url);
       });
     };
-
-    // ── Manage volunteers: add + view ───────────────────────────────
-    const volunteersListEl = node.querySelector('#volunteersList');
-    const volAddMsgEl      = node.querySelector('#volAddMsg');
-    const addVolBtn        = node.querySelector('#addVolunteerBtn');
-
-    function renderVolunteerRows(volunteers) {
-      if (!volunteers.length) {
-        volunteersListEl.innerHTML = `<div class="empty" style="padding:16px 4px">No volunteers added yet.</div>`;
-        return;
-      }
-      volunteersListEl.innerHTML = `<div class="summary">${volunteers.map(v => {
-        const addedDate = v.added
-          ? new Date(v.added).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-          : '-';
-        return `<div class="row">
-          <span>${escHtml(v.email)}${v.name ? ' · ' + escHtml(v.name) : ''}</span>
-          <b>${escHtml(v.role || 'Volunteer')} · ${addedDate}</b>
-        </div>`;
-      }).join('')}</div>`;
-    }
-
-    async function loadVolunteers() {
-      if (!cfg.endpoint || !cfg.campaignId) {
-        volunteersListEl.innerHTML = `<div class="empty" style="padding:16px 4px">Save the campaign first to manage volunteers.</div>`;
-        return;
-      }
-      volunteersListEl.innerHTML = `<div class="empty" style="padding:16px 4px">Loading…</div>`;
-      try {
-        const res  = await fetch(cfg.endpoint + '?action=listVolunteers&cid=' + encodeURIComponent(cfg.campaignId));
-        const data = await res.json();
-        if (data.ok) renderVolunteerRows(data.volunteers || []);
-        else volunteersListEl.innerHTML = `<div class="empty" style="padding:16px 4px">Could not load volunteers.</div>`;
-      } catch (e) {
-        volunteersListEl.innerHTML = `<div class="empty" style="padding:16px 4px">Could not load volunteers.</div>`;
-      }
-    }
-
-    addVolBtn.onclick = async () => {
-      const email = node.querySelector('#vol-email').value.trim().toLowerCase();
-      const name  = node.querySelector('#vol-name').value.trim();
-      const role  = node.querySelector('#vol-role').value;
-
-      volAddMsgEl.hidden = true;
-
-      if (!validEmail(email)) {
-        volAddMsgEl.hidden = false;
-        volAddMsgEl.innerHTML = `<b>Enter a valid email address.</b>`;
-        return;
-      }
-      if (!cfg.endpoint || !cfg.campaignId) {
-        volAddMsgEl.hidden = false;
-        volAddMsgEl.innerHTML = `<b>Save the campaign first,</b> then add volunteers.`;
-        return;
-      }
-
-      addVolBtn.disabled = true;
-      addVolBtn.querySelector('span:last-child').textContent = 'Adding…';
-
-      try {
-        const res  = await fetch(cfg.endpoint + '?cid=' + encodeURIComponent(cfg.campaignId), {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: 'addVolunteer', email, name, role }),
-        });
-        const data = await res.json();
-        if (!data.ok) throw new Error(data.error || 'Could not add volunteer.');
-
-        node.querySelector('#vol-email').value = '';
-        node.querySelector('#vol-name').value  = '';
-        node.querySelector('#vol-role').value  = 'Volunteer';
-        await loadVolunteers();
-      } catch (err) {
-        volAddMsgEl.hidden = false;
-        volAddMsgEl.innerHTML = `<b>${escHtml(err.message)}</b>`;
-      } finally {
-        addVolBtn.disabled = false;
-        addVolBtn.querySelector('span:last-child').textContent = 'Add volunteer';
-      }
-    };
-
-    loadVolunteers();
 
     // ── Live script preview ──────────────────────────────────────────
     // Debounced: re-parses and re-renders the preview 250ms after each keystroke.
@@ -2807,6 +2703,208 @@ function openSheet(which) {
           `<div class="faq"><h4>${escHtml(o.prompt)}</h4><p class="reply">${escHtml(fill(o.response))}</p></div>`
         ).join('')
       : `<div class="empty">No objections added yet.<br>Add a "## OBJECTIONS" section to your script in Campaign setup.</div>`;
+
+  } else if (which === 'volunteers') {
+    // Manage volunteers: bulk add + view. Removal is handled directly in the
+    // Sheet (explained in the how-it-works callout below). Admin-only (the
+    // bottom-bar button is hidden for non-admins), but guard here too in
+    // case this is ever reached another way.
+    title.textContent = 'Manage volunteers';
+    if (!isAdmin()) {
+      body.innerHTML = `<div class="empty">Only campaign admins can manage volunteers.</div>`;
+    } else {
+      // Wrapped in .setup so the shared .field/label/input/select styles apply
+      // (those rules are scoped to .setup, and this sheet body sits outside it).
+      body.innerHTML = `<div class="setup">
+        <div class="gcallout" style="margin-top:2px">
+          <b>How this works.</b> Fill in an email for each volunteer (name and role are optional -- role defaults to Volunteer). Tap <b>+ Add another volunteer</b> to queue up more before submitting, or just add one at a time.<br><br>
+          <b>To remove a volunteer,</b> open your campaign's Google Sheet and delete their row from the "Approved Volunteers" tab. That takes effect immediately -- there's no separate delete step in the app.
+        </div>
+
+        <!-- Rendered by renderVolRows() -- one card per queued volunteer -->
+        <div id="volRows"></div>
+        <div class="choices" style="margin-top:8px">
+          <button class="choice soft" type="button" id="addVolRowBtn" style="min-height:44px"><span class="ic">+</span><span>Add another volunteer</span></button>
+        </div>
+
+        <div class="warning-box" id="volAddMsg" hidden></div>
+        <!-- Progress status, replaces a static button label while the request is in flight -->
+        <div class="section-sub" id="volProgress" style="margin-top:8px;min-height:16px"></div>
+        <div class="choices" style="margin-top:10px">
+          <button class="choice go" type="button" id="addVolunteerBtn"><span class="ic">✓</span><span>Add volunteer(s)</span></button>
+        </div>
+
+        <div class="section">
+          <div class="section-head">Current volunteers</div>
+        </div>
+        <!-- Populated by loadVolunteers() -->
+        <div id="volunteersList" style="margin-top:10px"></div>
+      </div>`;
+
+      // ── Multi-row queue: same add/remove pattern as the Opponents list ──
+      const volRowsEl  = body.querySelector('#volRows');
+      let volRowSeq    = 0; // unique id per row, so remove targets the right one
+
+      function addVolRow() {
+        const id  = 'r' + (volRowSeq++);
+        const row = el(`<div class="vol-row" data-id="${id}" style="border:1px solid var(--line);border-radius:12px;padding:14px;margin-top:10px">
+          <div class="field" style="margin-top:0">
+            <label>Email</label>
+            <input class="vol-email-input" type="email" placeholder="e.g. volunteer@example.com" autocomplete="off">
+          </div>
+          <div class="field">
+            <label>Name <span style="text-transform:none;font-weight:600;color:var(--faint)">(optional)</span></label>
+            <input class="vol-name-input" placeholder="e.g. Jordan P." autocomplete="off">
+          </div>
+          <div class="field">
+            <label>Role</label>
+            <select class="vol-role-input">
+              <option value="Volunteer" selected>Volunteer</option>
+              <option value="Admin">Admin</option>
+            </select>
+          </div>
+          <div class="choices" style="margin-top:10px">
+            <button type="button" class="miniBtn danger vol-remove-btn">Remove this row</button>
+          </div>
+        </div>`);
+        row.querySelector('.vol-remove-btn').onclick = () => {
+          // Keep at least one row -- clear it instead of removing the last one.
+          if (volRowsEl.children.length <= 1) {
+            row.querySelector('.vol-email-input').value = '';
+            row.querySelector('.vol-name-input').value  = '';
+            row.querySelector('.vol-role-input').value  = 'Volunteer';
+            return;
+          }
+          row.remove();
+        };
+        volRowsEl.appendChild(row);
+        return row;
+      }
+
+      addVolRow(); // start with one blank row
+      body.querySelector('#addVolRowBtn').onclick = () => {
+        const row = addVolRow();
+        row.querySelector('.vol-email-input').focus();
+      };
+
+      // ── Wire up add + load, scoped to this sheet body ──────────────
+      const volunteersListEl = body.querySelector('#volunteersList');
+      const volAddMsgEl      = body.querySelector('#volAddMsg');
+      const volProgressEl    = body.querySelector('#volProgress');
+      const addVolBtn        = body.querySelector('#addVolunteerBtn');
+
+      function setVolProgress(msg) { volProgressEl.textContent = msg || ''; }
+
+      function renderVolunteerRows(volunteers) {
+        if (!volunteers.length) {
+          volunteersListEl.innerHTML = `<div class="empty" style="padding:16px 4px">No volunteers added yet.</div>`;
+          return;
+        }
+        volunteersListEl.innerHTML = `<div class="summary">${volunteers.map(v => {
+          const addedDate = v.added
+            ? new Date(v.added).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+            : '-';
+          return `<div class="row">
+            <span>${escHtml(v.email)}${v.name ? ' · ' + escHtml(v.name) : ''}</span>
+            <b>${escHtml(v.role || 'Volunteer')} · ${addedDate}</b>
+          </div>`;
+        }).join('')}</div>`;
+      }
+
+      async function loadVolunteers() {
+        if (!cfg.endpoint || !cfg.campaignId) {
+          volunteersListEl.innerHTML = `<div class="empty" style="padding:16px 4px">Save the campaign first to manage volunteers.</div>`;
+          return;
+        }
+        volunteersListEl.innerHTML = `<div class="empty" style="padding:16px 4px">Loading…</div>`;
+        try {
+          const res  = await fetch(cfg.endpoint + '?action=listVolunteers&cid=' + encodeURIComponent(cfg.campaignId));
+          const data = await res.json();
+          if (data.ok) renderVolunteerRows(data.volunteers || []);
+          else volunteersListEl.innerHTML = `<div class="empty" style="padding:16px 4px">Could not load volunteers.</div>`;
+        } catch (e) {
+          volunteersListEl.innerHTML = `<div class="empty" style="padding:16px 4px">Could not load volunteers.</div>`;
+        }
+      }
+
+      addVolBtn.onclick = async () => {
+        volAddMsgEl.hidden = true;
+        setVolProgress('');
+
+        // Collect every row that has at least an email typed in. Blank
+        // trailing rows (left over from "+ Add another") are ignored rather
+        // than treated as errors.
+        const rowsEls = Array.from(volRowsEl.querySelectorAll('.vol-row'));
+        const entries = [];
+        const badRows = [];
+        rowsEls.forEach((row, i) => {
+          const email = row.querySelector('.vol-email-input').value.trim().toLowerCase();
+          const name  = row.querySelector('.vol-name-input').value.trim();
+          const role  = row.querySelector('.vol-role-input').value;
+          if (!email) return; // fully blank row, skip silently
+          if (!validEmail(email)) { badRows.push(i + 1); return; }
+          entries.push({ email, name, role });
+        });
+
+        if (badRows.length) {
+          volAddMsgEl.hidden = false;
+          volAddMsgEl.innerHTML = `<b>Row ${badRows.join(', ')} ${badRows.length === 1 ? 'has' : 'have'} an invalid email.</b> Fix it and try again.`;
+          return;
+        }
+        if (!entries.length) {
+          volAddMsgEl.hidden = false;
+          volAddMsgEl.innerHTML = `<b>Enter at least one volunteer's email.</b>`;
+          return;
+        }
+        if (!cfg.endpoint || !cfg.campaignId) {
+          volAddMsgEl.hidden = false;
+          volAddMsgEl.innerHTML = `<b>Save the campaign first,</b> then add volunteers.`;
+          return;
+        }
+
+        addVolBtn.disabled = true;
+        setVolProgress(entries.length > 1
+          ? `Adding ${entries.length} volunteers…`
+          : 'Adding volunteer…');
+
+        try {
+          const res  = await fetch(cfg.endpoint + '?cid=' + encodeURIComponent(cfg.campaignId), {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'addVolunteers', entries }),
+          });
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.error || 'Could not add volunteers.');
+
+          setVolProgress('Refreshing list…');
+
+          // Reset the form back to a single blank row.
+          volRowsEl.innerHTML = '';
+          addVolRow();
+
+          const skipped = data.skipped || [];
+          if (data.added) {
+            volAddMsgEl.hidden = false;
+            volAddMsgEl.style.background = 'var(--ok-tint, #E4F3EA)';
+            volAddMsgEl.innerHTML = `<b>Added ${data.added} volunteer${data.added === 1 ? '' : 's'}.</b>` +
+              (skipped.length ? ` Skipped ${skipped.length}: ${skipped.map(s => escHtml(s.email) + ' (' + escHtml(s.reason) + ')').join(', ')}` : '');
+          } else if (skipped.length) {
+            volAddMsgEl.hidden = false;
+            volAddMsgEl.innerHTML = `<b>Nothing was added.</b> ${skipped.map(s => escHtml(s.email) + ' -- ' + escHtml(s.reason)).join('<br>')}`;
+          }
+
+          await loadVolunteers();
+        } catch (err) {
+          volAddMsgEl.hidden = false;
+          volAddMsgEl.innerHTML = `<b>${escHtml(err.message)}</b>`;
+        } finally {
+          addVolBtn.disabled = false;
+          setVolProgress('');
+        }
+      };
+
+      loadVolunteers();
+    }
 
   } else if (which === 'guide') {
     // Context-aware guide: shows Campaign Setup instructions when the organizer
