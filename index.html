@@ -815,16 +815,39 @@ function isAdmin() {
 }
 
 // Shows the sign-in screen and initializes the GIS button.
-function showSignin() {
+async function showSignin() {
   document.getElementById('appWrap').hidden = true;
   document.getElementById('signinWrap').hidden = false;
 
-  // Show the campaign's org name in the heading so volunteers can confirm
-  // at a glance they're on the right link, instead of a generic greeting.
-  // cfg.orgName is populated by boot()'s importFromEndpoint() call before
-  // showSignin() ever runs, so it's already available here on first paint.
+  // If we have a campaignId but no orgName, the stored config is incomplete
+  // (e.g. the campaign was registered but Campaign Setup was never saved, or
+  // this is a first visit on a new device that hasn't fetched config yet).
+  // Attempt a fresh fetch now so the heading can show the real org name.
+  if (cfg.campaignId && !cfg.orgName && cfg.endpoint) {
+    try {
+      const res  = await fetch(cfg.endpoint + '?action=getConfig&cid=' + encodeURIComponent(cfg.campaignId));
+      const data = await res.json();
+      if (data.ok && data.config) {
+        const imported       = JSON.parse(data.config);
+        const savedCanvasser = cfg.canvasser;
+        Object.assign(cfg, imported);
+        cfg.canvasser = savedCanvasser;
+        await saveCfg();
+      }
+    } catch(e) {
+      // Non-fatal: heading will fall back to campaignId below.
+    }
+  }
+
+  // Show the campaign name in the heading so volunteers can confirm at a
+  // glance they're on the right link. Falls back to the campaign ID slug
+  // if orgName isn't available, and to a generic string if neither is set.
   const orgNameEl = document.getElementById('signinOrgName');
-  orgNameEl.textContent = cfg.orgName ? 'Sign in to canvass for ' + cfg.orgName : 'Sign in to canvass';
+  orgNameEl.textContent = cfg.orgName
+    ? 'Sign in to canvass for ' + cfg.orgName
+    : cfg.campaignId
+      ? 'Sign in to canvass — ' + cfg.campaignId
+      : 'Sign in to canvass';
 
   if (window.google && window.google.accounts) {
     // google.accounts only exists after the GIS library (<script> in <head>) has loaded.
@@ -3863,6 +3886,18 @@ function printReportHtml(html) {
         history.replaceState(null, '', window.location.pathname);
       } catch(e) {
         console.warn('Config import from legacy cfg param failed:', e);
+      }
+    } else if (cfg.campaignId && !cfg.orgName && cfg.endpoint) {
+      // No URL param this time -- likely a bare URL or bookmark, let through
+      // by the redirect guard because a campaignId was already cached on
+      // this device. But the cached config never got an orgName saved (e.g.
+      // it was captured mid-setup), so the sign-in screen would otherwise
+      // show a blank/generic heading instead of the campaign name. Refresh
+      // from the server using the campaignId we already have.
+      try {
+        await importFromEndpoint(cfg.endpoint, cfg.campaignId);
+      } catch(e) {
+        console.warn('Config refresh from stored campaign id failed:', e);
       }
     }
 
