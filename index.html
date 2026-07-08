@@ -1286,6 +1286,11 @@ function escHtml(s) {
   return (s || '').replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
 }
 
+// Basic email format check, used by the Manage Volunteers add form.
+function validEmail(s) {
+  return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(s || '').trim());
+}
+
 // Refreshes the "Name · Phone/Door" strip at the bottom of the screen
 // and the org name / key date in the top bar.
 function updateWhoBar() {
