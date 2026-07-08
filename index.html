@@ -55,7 +55,7 @@
 
     // No URL params and no stored campaign: this is a genuine bare root visit.
     // Send to onboard so new organizers can self-serve without hitting the sign-in screen.
-    window.location.replace('landing.html');
+    window.location.replace('onboard.html');
   })();
 </script>
 
@@ -1626,6 +1626,33 @@ const SCREENS = {
         <!-- Shown only after the share link has been generated -->
         <button class="choice" id="copyShareBtn" hidden><span class="ic">📋</span><span id="copyShareLabel">Copy link</span></button>
       </div>
+
+      <!-- Manage volunteers: add + view. Removal is handled directly in the Sheet. -->
+      <div class="section" id="volunteersSection">
+        <div class="section-head">Manage volunteers</div>
+        <div class="section-sub">Add volunteers so they can sign in and start canvassing.</div>
+      </div>
+      <div class="field">
+        <label for="vol-email">Volunteer email</label>
+        <input id="vol-email" type="email" placeholder="e.g. volunteer@example.com" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="vol-name">Name <span style="text-transform:none;font-weight:600;color:var(--faint)">(optional)</span></label>
+        <input id="vol-name" placeholder="e.g. Jordan P." autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="vol-role">Role</label>
+        <select id="vol-role">
+          <option value="Volunteer" selected>Volunteer</option>
+          <option value="Admin">Admin</option>
+        </select>
+      </div>
+      <div class="warning-box" id="volAddMsg" hidden></div>
+      <div class="choices" style="margin-top:10px">
+        <button class="choice" id="addVolunteerBtn"><span class="ic">+</span><span>Add volunteer</span></button>
+      </div>
+      <!-- Populated by loadVolunteers() -->
+      <div id="volunteersList" style="margin-top:14px"></div>
     </div>`);
 
     render(node);
@@ -2025,6 +2052,88 @@ const SCREENS = {
         prompt('Copy this link:', url);
       });
     };
+
+    // ── Manage volunteers: add + view ───────────────────────────────
+    const volunteersListEl = node.querySelector('#volunteersList');
+    const volAddMsgEl      = node.querySelector('#volAddMsg');
+    const addVolBtn        = node.querySelector('#addVolunteerBtn');
+
+    function renderVolunteerRows(volunteers) {
+      if (!volunteers.length) {
+        volunteersListEl.innerHTML = `<div class="empty" style="padding:16px 4px">No volunteers added yet.</div>`;
+        return;
+      }
+      volunteersListEl.innerHTML = `<div class="summary">${volunteers.map(v => {
+        const addedDate = v.added
+          ? new Date(v.added).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+          : '-';
+        return `<div class="row">
+          <span>${escHtml(v.email)}${v.name ? ' · ' + escHtml(v.name) : ''}</span>
+          <b>${escHtml(v.role || 'Volunteer')} · ${addedDate}</b>
+        </div>`;
+      }).join('')}</div>`;
+    }
+
+    async function loadVolunteers() {
+      if (!cfg.endpoint || !cfg.campaignId) {
+        volunteersListEl.innerHTML = `<div class="empty" style="padding:16px 4px">Save the campaign first to manage volunteers.</div>`;
+        return;
+      }
+      volunteersListEl.innerHTML = `<div class="empty" style="padding:16px 4px">Loading…</div>`;
+      try {
+        const res  = await fetch(cfg.endpoint + '?action=listVolunteers&cid=' + encodeURIComponent(cfg.campaignId));
+        const data = await res.json();
+        if (data.ok) renderVolunteerRows(data.volunteers || []);
+        else volunteersListEl.innerHTML = `<div class="empty" style="padding:16px 4px">Could not load volunteers.</div>`;
+      } catch (e) {
+        volunteersListEl.innerHTML = `<div class="empty" style="padding:16px 4px">Could not load volunteers.</div>`;
+      }
+    }
+
+    addVolBtn.onclick = async () => {
+      const email = node.querySelector('#vol-email').value.trim().toLowerCase();
+      const name  = node.querySelector('#vol-name').value.trim();
+      const role  = node.querySelector('#vol-role').value;
+
+      volAddMsgEl.hidden = true;
+
+      if (!validEmail(email)) {
+        volAddMsgEl.hidden = false;
+        volAddMsgEl.innerHTML = `<b>Enter a valid email address.</b>`;
+        return;
+      }
+      if (!cfg.endpoint || !cfg.campaignId) {
+        volAddMsgEl.hidden = false;
+        volAddMsgEl.innerHTML = `<b>Save the campaign first,</b> then add volunteers.`;
+        return;
+      }
+
+      addVolBtn.disabled = true;
+      addVolBtn.querySelector('span:last-child').textContent = 'Adding…';
+
+      try {
+        const res  = await fetch(cfg.endpoint + '?cid=' + encodeURIComponent(cfg.campaignId), {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'addVolunteer', email, name, role }),
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || 'Could not add volunteer.');
+
+        node.querySelector('#vol-email').value = '';
+        node.querySelector('#vol-name').value  = '';
+        node.querySelector('#vol-role').value  = 'Volunteer';
+        await loadVolunteers();
+      } catch (err) {
+        volAddMsgEl.hidden = false;
+        volAddMsgEl.innerHTML = `<b>${escHtml(err.message)}</b>`;
+      } finally {
+        addVolBtn.disabled = false;
+        addVolBtn.querySelector('span:last-child').textContent = 'Add volunteer';
+      }
+    };
+
+    loadVolunteers();
 
     // ── Live script preview ──────────────────────────────────────────
     // Debounced: re-parses and re-renders the preview 250ms after each keystroke.
